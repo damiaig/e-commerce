@@ -406,7 +406,7 @@ const addCartToMemory = () => {
         const product = listProducts.find(p => p.id === c.product_id);
         return {
           id: c.product_id,
-          name: product?.name || "Unnamed Item",
+          itemName: product?.name || "Unnamed Item",  // ✅ renamed to avoid conflict
           quantity: c.quantity,
           price: product?.price || 0,
           image: product?.image || ""
@@ -453,10 +453,11 @@ const addCartToMemory = () => {
   
       alert("Order placed!");
       addCartToHTML();
-    } catch (err) {
-      console.error("Error saving order:", err);
-      alert("Something went wrong. Try again.");
+    } catch (err) {       console.error("Error saving order:", err);
+      alert("Something went wrong. Try again.\n" + (err.message || ""));
     }
+    
+      a 
   }
 
 
