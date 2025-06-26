@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="style.css" rel="stylesheet">
+    <title>Home Page</title>
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+
+</head>
+<body>
+ 
+  
+ 
+     
+          
+  <div id="loaderOverlay" style="display:none;">
+    <div class="loader"></div>
+  </div> 
+        <div class="item-modal" style="display: none;">
+            <div class="item-modal-content">
+              <!-- Dynamic item content will be inserted here -->
+            </div>
+          </div>
+  
+          <!-- Landing Section -->
+<!-- Landing Section -->
+<div id="landingSection" class="landing-hero">
+  <div class="landing-content">
+    <h1>Welcome to Our Store</h1>
+    <button class="catalog-btn" onclick="document.querySelector('.sections').scrollIntoView({ behavior: 'smooth' });">
+      View Catalog
+    </button>
+  </div>
+</div>
+
+<header>
+  <div class="title">PRODUCT LIST</div>
+  <h1 class="center-header"><span class="reload-text">NORTH SIDE</span></h1>
+  <div class="center-header1"><h1><span class="reload-text">NTS</span></h1></div>
+  
+  <div class="icon-container">
+
+
+  <div class="icon-cart">
+      <svg class="" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M5 4h1.5L9 16m0 0h8m-8 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm8 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm-8.5-3h9.25L19 7H7.312"/>
+      </svg>
+      <span>0</span>
+  </div>
+
+  </div>
+</header>
+<!-- Product List -->
+<div class="sections">
+  <!-- Sections and items will be injected here -->
+</div>
+
+  
+      
+        </div>
+<!-- Form Modal -->
+<!-- Modal Wrapper -->
+        <div id="formModal" class="form-modal" style="display: none;">
+        <div class="form-modal-content">
+        <span class="close-form">&times;</span>
+        <h2>Enter Your Details</h2>
+        <form id="checkoutForm">
+        <label for="name">Name</label>
+        <input type="text" id="name" maxlength="50" required>
+      
+        <label for="email">Email</label>
+        <input type="email" id="email" maxlength="50" required>
+      
+        <label for="phone">Phone Number</label><br>
+        <select id="countryCode" required>
+        <option value="">Select country code</option>
+          <!-- country options here -->
+        </select>
+        <input type="tel" id="phone" maxlength="15" required>
+      
+        <input type="text" placeholder="Pickup Location" id="pickup" maxlength="150" required>
+      
+        <button type="submit" class="submit-btn">Continue to Payment</button>
+        </form>
+      
+        </div>
+        </div>
+  
+  
+    <!-- Shopping Cart Tab -->
+        <div class="cartTab">
+        <h1>Shopping Cart</h1>
+        <div class="listCart">
+            <!-- Cart items will be dynamically populated here -->
+        </div>
+        <div class="btn">
+            <button class="close">CLOSE</button>
+            <button class="checkOut" disabled >CHECK OUT</button>
+        </div>
+        </div>
+
+    <!-- Checkout Container -->
+        <div class="overlay"> 
+        <div class="checkout"  >
+        <div class="checkout-header">
+            <h2>Checkout</h2>
+            <button class="close-checkout">Close</button>
+        </div>
+        <div class="checkout-list"></div>
+        <div class="total-price"  ></div>
+        <button id="showFormModal">Fill in the form</button>
+
+       <!-- PayPal Modal -->
+<!-- Paystack Modal Container (optional styling for modal appearance) -->
+<div id="paystackModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <span class="close-paystack-modal" style="cursor:pointer;float:right;">&times;</span>
+    <h2>Proceed to Payment</h2>
+    <div class="paystack-button-container">
+      <!-- Paystack button will be triggered automatically -->
+    </div>
+  </div>
+</div>
+
+ <!-- Add a separate container for the PayPal button -->
+        </div>
+    
+        </div>
+<!-- ✅ Load Paystack SDK first -->
+ 
+        <script type="module" src="homi.js"></script>
+        <script type="text/javascript"
+        src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js">
+</script>
+        <script>
+          emailjs.init('OGJL_7MdLJz6Vjdof'); // Replace with your EmailJS public key
+        </script>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>
+        <script>
+        // Block Ctrl + Scroll and pinch zoom
+        document.addEventListener('wheel', function (e) {
+          if (e.ctrlKey) e.preventDefault();
+        }, { passive: false });
+    
+        document.addEventListener('gesturestart', function (e) {
+          e.preventDefault();
+        });
+      </script>
+
+<script>
+  window.addEventListener("scroll", () => {
+    const header = document.querySelector("header");
+    const landing = document.getElementById("landingSection");
+    const triggerPoint = landing.offsetHeight;
+
+    if (window.scrollY >= triggerPoint) {
+      header.classList.add("fixed-header");
+    } else {
+      header.classList.remove("fixed-header");
+    }
+  });
+</script>
+
+
+
+
+ 
+ 
+
+      
+</body>
+</html>

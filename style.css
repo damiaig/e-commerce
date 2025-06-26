@@ -1,0 +1,826 @@
+
+@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+body {
+  font-family: "Poppins", sans-serif;
+  margin: 0;
+}
+body, html {
+  font-family: "Poppins", sans-serif;
+  margin: 0;
+  overflow-x: hidden; /* Prevents horizontal overflow */
+}
+ 
+header h1{
+  margin-bottom: 0;
+  margin-top: 0;
+   font-weight: 300;
+  
+ 
+}
+
+.reload-text {
+  cursor: pointer;
+}
+
+
+svg {
+  width: 40px;
+  height: 40px;
+}
+
+
+header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  top: 0;
+  left: 0;
+  position: absolute; /* Start as absolute */
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  padding: 20px 0;
+  z-index: 9;
+  backdrop-filter: blur(1px);
+
+  /* Fade and slide transition */
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  pointer-events: none;
+}
+
+header.fixed-header {
+  position: fixed;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+
+
+
+.center-header1{
+ 
+  display:none;
+  font-size: 16px !important;
+ 
+  text-align: center;
+ min-width: 100%;
+ max-width: 100% !important;
+margin-left: auto ;
+margin-right: auto;
+ 
+}
+
+.center-header {
+ 
+ text-align: center;
+ min-width: 100%;
+ max-width: 100% !important;
+margin-left: auto ;
+margin-right: auto;
+ 
+}
+
+.icon-container {
+  display: flex;
+  align-items: center;
+  gap: 0px; /* Adds some space between the mail and cart */
+}
+
+
+header .icon-cart {
+  position: relative;
+  right: 70px;
+}
+
+header .icon-cart span {
+  display: flex;
+  width: 25px;
+  height: 25px;
+  background-color: red;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  right: -8px;
+}
+
+header .title {
+  position: absolute;
+  left: 20px; /* Keep it on the far left */
+}
+
+.listProduct .item img {
+  width: 200px;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 4px;
+  }
+
+.listProduct {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  text-align: center;
+  gap: 0px;
+ 
+  position: relative;
+ 
+}
+
+.section-line {
+  width: 90%;
+  height: 1px;
+  background-color: #ccc;
+  margin: 20px auto 10px auto; /* top spacing, centered */
+}
+.section h2{
+  text-align: center;
+font-size: 27px;
+font-weight: 300;
+}
+.sections{
+ 
+  padding: 30px;
+}
+ 
+.listProduct .item {
+  border-radius: 0px;
+  cursor: pointer;
+  padding: 20px;
+  transition: opacity 0.3s ease;
+}
+
+.listProduct .item:hover {
+  opacity: 0.6; /* or any value less than 1 for fading effect */
+}
+
+.listProduct .item h2 {
+  font-weight: 500;
+  font-size: large;
+}
+
+.listProduct .item .price {
+  letter-spacing: 1px;
+  font-size: medium;
+}
+
+.listProduct .item button {
+  background-color: #353432;
+  color: #eee;
+  padding: 5px 10px;
+  border-radius: 20px;
+  margin-top: 10px;
+  border: none;
+  cursor: pointer;
+}
+.cartTab {
+  width: 400px;
+  background-color: #353432;
+  color: #eee;
+  position: fixed;
+  top: 0;
+  right: -500px;
+  bottom: 0;
+  z-index: 15 !important;
+  display: grid;
+  grid-template-rows: 70px 1fr 70px;
+  transition: 0.65s;
+}
+body.showCart .cartTab {
+  right: 0;
+}
+body.showCart .container {
+  transform: translateX(-250px);
+}
+
+.cartTab h1 {
+  padding: 20px;
+  margin: 0;
+  font-weight: 300;
+}
+.btn button{
+  font-size: 16px;
+}
+.cartTab .btn {
+  display: grid;
+ 
+  grid-template-columns: repeat(2, 1fr);
+}
+.cartTab .listCart .item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 10px;
+  gap:20px;
+  border-bottom: 1px solid #ccc;
+}
+
+.cartTab .listCart .item .image img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 4px ;
+}
+
+.cartTab .listCart .item .totalPrice {
+  margin-top: auto;
+  font-weight: bold;
+  font-size: 14px;
+  text-align: center;
+}
+
+
+.listCart .quantity span {
+  display: inline-block;
+  width: 25px;
+  height: 25px;
+  background-color: #eee;
+  color: #555;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.listCart .quantity span:nth-child(2) {
+  background-color: transparent;
+  color: #eee;
+}
+
+.listCart .item:nth-child(2) {
+  background-color: #555;
+}
+
+.listCart {
+  overflow: auto;
+}
+
+.listCart::-webkit-scrollbar {
+  width: 0;
+}
+
+@media only screen and (max-width: 992px) {
+  .listProduct {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* mobile */
+@media (max-width: 768px) {
+  .listProduct {
+    grid-template-columns: repeat(2, 1fr);
+  }
+ 
+}
+.btn button{
+cursor: pointer;
+}
+.checkout {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  overflow: scroll;
+  background-color: #555;
+  padding: 20px;
+  border-radius: 10px;
+  width: 90vw;
+  max-width: 500px;
+  max-height: 600px;
+  z-index: 99999;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.checkout .checkout-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 20px;
+}
+
+.checkout .checkout-header h2 {
+  color: #fff; /* White text for better contrast */
+  margin: 0;
+  font-size: 24px;
+}
+
+.checkout .close-checkout {
+  background-color: transparent;
+  border: none;
+  font-size: 18px;
+  color: #fff; /* White text for better contrast */
+  cursor: pointer;
+}
+
+.checkout .checkout-list {
+  background-color: #666; /* Slightly lighter gray background for the list */
+  padding: 15px;
+  border-radius: 8px;
+  overflow-y: auto;
+  max-height: 300px; /* Limit height and make scrollable if too many items */
+}
+
+.checkout .checkout-list .item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  color: #fff; /* White text for the items */
+}
+
+.checkout .checkout-list .item .image {
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+}
+
+.checkout .checkout-list .item .image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.checkout .checkout-list .item .name {
+  font-size: 14px;
+  flex: 1;
+  margin-left: 15px;
+}
+
+.checkout .checkout-list .item .totalPrice {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.checkout .total-price {
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff; /* White text for total price */
+  text-align: right;
+  margin-top: 20px;
+}
+
+/* Overlay that covers the page and fades the background */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+  z-index: 999; /* Just below the checkout modal */
+  display: none; /* Initially hidden */
+}
+
+/* Fading background when checkout is active */
+body.modal-open {
+  pointer-events: none; /* Disable interaction with the rest of the page */
+  overflow: hidden; /* Disable scrolling */
+}
+.cartTab .name{
+  text-align: left;
+    font-size: 14px;
+}
+/* Allow interaction only with the checkout */
+body.modal-open .checkout,
+body.modal-open .overlay {
+  pointer-events: auto;
+}
+@media (max-width: 400px) {
+.cartTab .name{
+  text-align: left;
+    font-size: 14px;
+}
+}
+
+@media (max-width: 650px) {
+.center-header1{
+  text-align: left;
+  position: relative;
+  left: 20px;
+}
+
+.title{
+  display:none
+}
+}
+
+@media (max-width: 650px) {
+.center-header1{
+    display:block;
+   
+       }
+
+
+       header .center-header{
+        display:none;
+           }
+          }
+           @media (max-width: 470px) {
+           .listProduct {
+            grid-template-columns: repeat(1, 1fr);
+          }
+        }
+
+.checkOut:disabled {
+ 
+    background-color: #ccc; /* <-- replace this with your preferred disabled color */
+ 
+    cursor: not-allowed;
+    opacity: 0.9;
+  }
+  
+ 
+
+
+@media (max-width: 390px) {
+
+  .cartTab {
+    width: 100vw;
+  }}
+
+  header .svg-icon {
+    margin-right: 20px; /* Add spacing between the mail and cart icons */
+  }
+
+
+
+  .item-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7); /* dark overlay */
+    display: none; /* use JS to show/hide */
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .item-modal-content {
+    width: 300px;
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    position: relative;
+    text-align: center;
+    box-shadow: 0 0 15px rgba(0,0,0,0.25);
+  }
+  
+  .item-modal-content img {
+    width: 200px;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 15px;
+  }
+  
+  .item-modal-content h2 {
+    font-size: 20px;
+    margin: 10px 0;
+  }
+  
+  .item-modal-content p {
+    font-size: 14px;
+    margin: 10px 0;
+  }
+  
+  .item-modal-content .stock {
+    font-weight: bold;
+    margin-bottom: 15px;
+  }
+  
+  .item-modal-content .proceed-btn {
+    padding: 10px 20px;
+    background-color: black;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  
+  .quantity span {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    cursor: pointer;
+  }
+  
+
+  .buti-buti{
+    display: flex;
+    width: 150px;
+    gap: 10px;
+    margin-left: auto;
+    margin-right: auto;
+ 
+ 
+   
+  }
+
+
+  .buti-buti input{
+    margin-top: auto;
+    outline: none;
+  }
+
+  .buti-buti label{
+   bottom: 5px !important;
+    position: relative;
+  }
+
+
+
+
+  /* Form Modal Background */
+.form-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 99900;
+}
+
+/* Modal Content Box */
+.form-modal-content {
+  background-color: #fff;
+  padding: 30px 25px;
+  border-radius: 10px;
+ position:relative;
+ width: 400px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  animation: popIn 0.3s ease;
+}
+
+/* Modal Animation */
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+#countryCode {
+  width: 180px;
+  padding: 10px 12px;
+  font-size: 16px;
+  border: 2px solid #ccc;
+  border-radius: 6px;
+  background-color: #fff;
+  color: #333;
+  appearance: none;
+  margin-bottom: 15px;;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+#countryCode:focus {
+  border-color: #007BFF;
+  outline: none;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.4);
+}
+
+#countryCode option {
+  padding: 8px;
+  font-size: 15px;
+}
+
+/* Form Fields */
+#checkoutForm input {
+  width: 92%;
+  padding: 12px 15px;
+  margin-bottom: 15px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  transition: border-color 0.3s;
+}
+
+#checkoutForm input:focus {
+  border-color: #007bff;
+  outline: none;
+}
+ 
+#showFormModal{
+  width: 100%;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding: 12px;
+  background-color: #007bff;
+  color: white;
+  font-size: 1rem;
+  border: none;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+/* Submit Button */
+#checkoutForm button {
+  width: 100%;
+  padding: 12px;
+  background-color: #007bff;
+  color: white;
+  font-size: 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#checkoutForm button:hover {
+  background-color: #0056b3;
+}
+
+/* Optional: Close button (if needed later) */
+
+.close-form {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 34px;
+  font-weight: 300;
+  cursor: pointer;
+}
+
+ 
+/* Modal backdrop */
+#paystackModal.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: none; /* default hidden */
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+}
+
+/* Modal box */
+#paystackModal .modal-content {
+  background-color: #fff;
+  padding: 30px 20px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  position: relative;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  text-align: center;
+}
+
+/* Close button */
+#paystackModal .close-paystack-modal {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  font-size: 34px;
+  color: #333;
+  font-weight: 300;
+  transition: color 0.2s ease-in-out;
+}
+
+#paystackModal .close-paystack-modal:hover {
+  color: #ff4d4d;
+}
+
+/* Heading */
+#paystackModal h2 {
+  font-size: 22px;
+  margin-bottom: 20px;
+  color: #111;
+}
+#loaderOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999 !important;
+}
+
+.loader {
+  border: 6px solid #f3f3f3;
+  border-top: 6px solid #222;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+
+
+
+
+
+
+.out-of-stock {
+  filter: grayscale(100%);
+  position: relative;
+  opacity: 1; /* keep fully visible */
+}
+
+.out-of-stock-x {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  font-size: 200px;
+  background-color: rgba(255, 255, 255, 0.4);
+  color: red;
+  font-weight: lighter;
+  z-index: 10; /* MUST be high */
+  pointer-events: none; /* Prevent hover over the X itself */
+}
+
+.out-of-stock-text {
+  color: red;
+  font-size: 15px;
+  margin-top: 5px;
+  font-weight: 500;
+}
+ 
+.closerr{
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 34px;
+  font-weight: 300;
+  cursor: pointer;
+}
+
+
+
+
+.landing-hero {
+  position: relative;
+  height: 100vh;
+ background-size: cover;
+  background-position: center;
+ z-index: 2 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.landing-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5); /* This creates the faded/dark overlay */
+  z-index: 1;
+}
+
+.landing-content {
+  position: relative;
+  z-index: 2;
+  color: white;
+  text-align: center;
+  padding: 40px;
+  border-radius: 12px;
+}
+
+.catalog-btn {
+  margin-top: 20px;
+  padding: 12px 24px;
+  font-size: 16px;
+  color: #fff;
+  background-color: transparent;
+  border: 1px solid #fff ;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.catalog-btn:hover {
+  background-color: #ddd;
+  color: black;
+}
+
+ 

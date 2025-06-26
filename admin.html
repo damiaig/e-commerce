@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+    <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+            <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+            
+            <style>
+              
+                /* Prevent font-based zooming on iOS */
+                input, button, select, textarea {
+                  font-size: 16px;
+                }
+            
+                html, body {
+                  touch-action: manipulation;
+                }
+              </style>
+
+            <link href="admin.css" rel="stylesheet">
+            <title>Admin</title>
+        </head>
+        
+        <body>
+          <div id="loaderOverlay" style="display:none;">
+            <div class="loader"></div>
+          </div> 
+<h1>ADMIN PANEL
+</h1>
+<div class="page-divider">
+  <div class="orders">
+ 
+    
+    <h2>Orders</h2>
+    <div class="filter-bar">
+      <input type="text" placeholder="Filter by name..." class="filter-name-order">
+      <input type="text" placeholder="Filter by email..." class="filter-email-order">
+      <input type="text" placeholder="Filter by date..." class="filter-date-order">
+    </div>
+    
+    <div id="ordersContainer"></div>
+  </div>
+  
+      
+      
+  <div class="items">
+    <h2>Home Page Background Image</h2>
+    <div id="bgImageSection">
+      <p>Current background:</p>
+      <img id="bgPreview" src="" alt="Background preview" width="100" height="100" />
+      <br><br>
+      <input type="file" id="bgImageInput" accept="image/*" />
+      <button id="saveBgBtn">Save</button>
+    </div>
+    
+    
+  <button id="openModalBtn">Create New Section</button>
+
+  <div class="section-container" id="sectionContainer"></div>
+
+</div>
+
+<!-- Edit Item Modal -->
+<div id="editItemModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <span class="close" id="closeEditModalBtn">&times;</span>
+ 
+    <h3>Edit Item</h3>
+    <form id="editItemForm">
+      <input type="text" id="editName" maxlength="30" placeholder="Item Name" required>
+      <input type="number" id="editPrice" maxlength="18" placeholder="Price" required>
+      <input type="number" id="editStock" maxlength="18" placeholder="Quantity" required>
+      <textarea id="editDesc" placeholder="Description" maxlength="150"></textarea>
+      <input type="file" id="editImage">
+      <button type="submit">Save Changes</button>
+    </form>
+  </div>
+</div>
+
+          <!-- Items Modal -->
+<div id="itemsModal" class="modal" style="display: none;">
+    <div class="items-modal-content">
+      <span class="close" id="closeItemsModalBtn">&times;</span>
+ 
+    
+        <!-- Items will be injected here -->
+  
+        <h2>Order Info</h2>
+<!-- Customer Info for Items Modal -->
+<div id="itemsOrderInfo" style="margin-bottom: 15px;">
+  <p><strong>Order Date:</strong> <span id="itemsOrderDate"></span></p>
+  <p><strong>Pickup Address:</strong> <span id="itemsPickupAddress"></span></p>
+  <p><strong>Email:</strong> <span id="itemsCustomerEmail"></span></p>
+  <p><strong>Phone:</strong> <span id="itemsCustomerPhone"></span></p>
+</div>
+<h2>Order Items</h2>
+<div id="itemsList" class="items-list"></div>
+ 
+      </div>
+    </div>
+  </div>
+  <!-- Pending Modal -->
+<div id="pendingModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+      <span class="close" id="closePendingModalBtn">&times;</span>
+      <h2>Order Fulfillment</h2>
+  
+      <!-- Customer Info -->
+      <div id="pendingOrderInfo" style="margin-bottom: 15px;">
+        <p><strong>Order Date:</strong> <span id="orderDate"></span></p>
+        <p><strong>Pickup Address:</strong> <span id="pickupAddress"></span></p>
+        <p><strong>Email:</strong> <span id="customerEmail"></span></p>
+        <p><strong>Phone:</strong> <span id="customerPhone"></span></p>
+      </div>
+  
+      <!-- Fulfillment Form -->
+      <form id="pendingForm">
+        <label>Has the order been delivered?</label><br>
+        <select id="deliveredStatus" required>
+          <option value="">Select</option>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select><br><br>
+  
+        <label for="pickupArea">Pickup Area:</label><br>
+        <input type="text" id="pickupArea" required><br><br>
+  
+        <button type="submit">Generate Text</button>
+      </form>
+  
+      <!-- Generated Message -->
+      <div id="generatedMessage" style="margin-top: 20px; white-space: pre-wrap;"></div>
+    </div>
+  </div>
+  <!-- Item Modal -->
+ 
+  <div id="itemModal" style="z-index: 99999; display: none;" class="modal"  >
+    <div class="items-modal-content item-modal">
+      <span class="close" id="closeItemModalBtn">&times;</span>                   
+      <h3>Add Item</h3>
+      <form id="itemForm" class="item-form">
+        <input type="text" id="itemName" maxlength="30" placeholder="Item Name" required>
+        <textarea id="itemDescription" 
+        placeholder="Item Description (max 150 characters)" 
+        maxlength="150" 
+        rows="3" 
+        style="resize: none;" 
+        required></textarea>
+        <input type="number" id="itemPrice" maxlength="18" placeholder="Price" required>
+        <input type="number" id="itemStock" maxlength="18" placeholder="Quantity" required>
+        <input type="file" id="itemImage">
+        <button type="submit" class="btn">Save</button>
+      </form>
+    </div>
+  </div>
+            <!-- Modal -->
+            <div id="sectionModal" class="modal" style="display: none;">
+
+            
+              
+            <div class="section-box items-modal-content">
+              <span class="close" id="closeModalBtn">&times;</span>  
+                <h2>Add New Section</h2>
+              
+                <form id="sectionForm" class="section-form">
+                  <input type="text" id="sectionName" placeholder="Section Name" required><br><br>
+                
+                  <div id="itemsWrapper">
+                    <h3>Items in Section</h3>
+                    <div id="itemPreviewList" class="item-preview-list"></div>
+                    <button type="button" id="addItemBtn" class="btn">+ Add Item</button>
+                  </div>
+                
+                  <button type="submit" id="submitSection" class="btn">Submit Section</button>
+                </form>
+                
+                  </div>
+               
+                
+            </div>         </div>
+              
+          
+            <!-- Container for Existing Sections -->
+            <div id="sectionsContainer">
+              <!-- Example Section (clone for others dynamically) -->
+              <!--
+              <div class="section-box">
+                <h3>Section Title</h3>
+                <button class="addItemBtn">Add Item</button>
+                <button class="editSectionBtn">Edit Section</button>
+                <button class="deleteSectionBtn">Delete Section</button>
+              </div>
+              -->
+            </div>
+            <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@1.0.17/dist/browser-image-compression.min.js"></script>
+
+            <script type="module" src="admin.js"></script>
+
+            <script>
+                // Block Ctrl + Scroll and pinch zoom
+                document.addEventListener('wheel', function (e) {
+                  if (e.ctrlKey) e.preventDefault();
+                }, { passive: false });
+            
+                document.addEventListener('gesturestart', function (e) {
+                  e.preventDefault();
+                });
+              </script>
+          </body>
+          
+ 
+    
+ 
+
+ 
+  
+ 
+  
+</html>
