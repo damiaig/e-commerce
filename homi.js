@@ -1,828 +1,909 @@
-
-@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
-body {
-  font-family: "Poppins", sans-serif;
-  margin: 0;
-}
-body, html {
-  font-family: "Poppins", sans-serif;
-  margin: 0;
-  overflow-x: hidden; /* Prevents horizontal overflow */
-}
+import { db, storage } from "./firebase-config.js";
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject
+} from "https://www.gstatic.com/firebasejs/9.16.0/firebase-storage.js";
  
-header h1{
-  margin-bottom: 0;
-  margin-top: 0;
-   font-weight: 300;
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  updateDoc,
+  query,
+  getDoc,
+  orderBy,
+  setDoc,
+  getDocs,
+  deleteDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/9.16.0/firebase-firestore.js";
+
+ 
+
+
+// Declare DOM elements
+let iconCart = document.querySelector(".icon-cart")
+let closeCart = document.querySelector(".close")
+let body = document.querySelector("body")
+let listCart = document.querySelector(".listCart")
+let iconCartSpan = document.querySelector(".icon-cart span")
+let listProductHTML = document.querySelector(".listProduct")
+let checkoutContainer = document.querySelector(".checkout")
+let checkoutList = document.querySelector(".checkout-list")
+let totalPriceElement = document.querySelector(".total-price")
+let closeCheckoutButton = document.querySelector(".close-checkout")
+let overlay = document.querySelector(".overlay")
+
+// Cart and product data
+let carts = []
+let listProducts = []
+
+// Event listeners for toggling the cart view
+iconCart.addEventListener("click", () => {
+  body.classList.toggle("showCart")
+})
+closeCart.addEventListener("click", () => {
+  body.classList.toggle("showCart")
+}) 
+ 
+ 
+const sectionsContainer = document.querySelector(".sections");
+
+async function loadSectionsAndItems() {
+  const querySnapshot = await getDocs(collection(db, "sections"));
+  sectionsContainer.innerHTML = ""; // clear existing content
+
+  querySnapshot.forEach((doc) => {
+    const section = doc.data();
+    const items = section.items || [];
+
+    // Create section container
+    const sectionDiv = document.createElement("div");
+    sectionDiv.classList.add("section");
+
+    // Add section name/title
+// Add horizontal line above title
+const hr = document.createElement("div");
+hr.classList.add("section-line");
+
+const sectionTitle = document.createElement("h2");
+sectionTitle.classList.add("section-title");
+sectionTitle.textContent = section.sectionName;
+
+// Append the line and title to the section
+sectionDiv.appendChild(hr);
+sectionDiv.appendChild(sectionTitle);
+
+
+    // Create listProduct container
+    const listProduct = document.createElement("div");
+    listProduct.classList.add("listProduct");
+
+    // Add each product as innerHTML
+    items.forEach((item, itemIndex) => {
+
+      const productDiv = document.createElement("div");
+      const product_id = `${section.sectionName}-${itemIndex}`;
+
+      productDiv.classList.add("item");
+      
+      productDiv.innerHTML = `
+        <img class="product-img" src="${item.imageUrl}" alt="${item.name}">
+        <h2>${item.name.length > 20 ? item.name.slice(0, 20) + '...' : item.name}</h2>
+        <div class="price">$${item.price}</div>
+        <button class="addCart">Add To Cart</button>
+      `;
+
+      listProducts.push({
+        id: product_id,
+        name: item.name,
+        price: item.price,
+        image: item.imageUrl,
+        stock: item.stock // 👈 Add this
+      });
+      if (item.stock <= 0) {
+        productDiv.classList.add("out-of-stock");
+        productDiv.style.position = "relative";
+        productDiv.style.pointerEvents = "none"; // disable click
+      
+        // Add red X over the image
+        const xOverlay = document.createElement("div");
+        xOverlay.classList.add("out-of-stock-x");
+        xOverlay.innerHTML = "&times;";
+
+        productDiv.appendChild(xOverlay);
+      
+        // Add "Out of Stock" under the name
+        const outOfStockText = document.createElement("p");
+        outOfStockText.classList.add("out-of-stock-text");
+        outOfStockText.textContent = "OUT OF STOCK";
+        productDiv.appendChild(outOfStockText);
+      }
+      
+      
+      
+      listProduct.appendChild(productDiv);
+      
+
+      const modal = document.querySelector(".item-modal");
+const modalContent = document.querySelector(".item-modal-content");
+
+const showModal = () => {
+    const existingInCart = carts.find(c => c.product_id === product_id);
+    const alreadyInCart = existingInCart ? existingInCart.quantity : 0;
+    const availableStock = item.stock - alreadyInCart;
+  
+    modalContent.innerHTML = `
+ <span class="closerr">&times;</span>
+      <img src="${item.imageUrl}" alt="${item.name}">
+      <h2>${item.name}</h2>
+      <p>${item.description}</p>
+      <div class="stock">Items Left: ${availableStock}</div>
+      <div class="buti-buti">
+        <label for="quantity" style="display:block; margin: 10px 0;">Quantity:</label>
+        <input type="number" id="quantity" min="1" max="${availableStock}" value="1" style="width: 80px; padding: 5px; margin-bottom: 15px;">
+      </div>
+      <button class="proceed-btn">Proceed</button>
+    `;
+const qtyInput = document.getElementById("quantity");
+const maxLength = item.stock.toString().length;
+
+qtyInput.setAttribute("maxlength", maxLength); // optional for mobile
+ 
+const proceedBtn = modalContent.querySelector(".proceed-btn");
+const mclose = document.querySelector(".closerr");
+ 
+  
   
  
-}
-
-.reload-text {
-  cursor: pointer;
-}
-
-
-svg {
-  width: 40px;
-  height: 40px;
-}
-
-
-header {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  top: 0;
-  left: 0;
-  position: absolute; /* Start as absolute */
-  background: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  padding: 20px 0;
-  z-index: 9;
-  backdrop-filter: blur(1px);
-
-  /* Fade and slide transition */
-  opacity: 0;
-  transform: translateY(-20px);
-  transition: opacity 0.5s ease, transform 0.5s ease;
-  pointer-events: none;
-}
-
-header.fixed-header {
-  position: fixed;
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-
-
-
-.center-header1{
  
-  display:none;
-  font-size: 16px !important;
- 
-  text-align: center;
- min-width: 100%;
- max-width: 100% !important;
-margin-left: auto ;
-margin-right: auto;
- 
-}
+  proceedBtn.addEventListener("click", () => {
+    const quantity = parseInt(qtyInput.value);
+    const existingInCart = carts.find(c => c.product_id === product_id);
+    const alreadyInCart = existingInCart ? existingInCart.quantity : 0;
+    const availableStock = item.stock - alreadyInCart;
+  
+    if (isNaN(quantity) || quantity < 1) {
+      alert("Please enter a valid quantity.");
+      return;
+    }
+  
+    if (quantity > availableStock) {
+      alert(`Only ${availableStock} left for you to add.`);
+      return;
+    }
+  
+    if (existingInCart) {
+      existingInCart.quantity += quantity;
+    } else {
+      carts.push({
+        product_id,
+        quantity
+      });
+    }
+  
+    addCartToHTML();
+    addCartToMemory();
+  
+    modal.style.display = "none";
+    alert(`Added ${quantity} unit${quantity > 1 ? "s" : ""} of "${item.name}" to cart`);
+  });
+  
+  
 
-.center-header {
- 
- text-align: center;
- min-width: 100%;
- max-width: 100% !important;
-margin-left: auto ;
-margin-right: auto;
- 
-}
+qtyInput.addEventListener("input", () => {
+  let value = qtyInput.value;
 
-.icon-container {
-  display: flex;
-  align-items: center;
-  gap: 0px; /* Adds some space between the mail and cart */
-}
+  // Remove any non-digit characters
+  value = value.replace(/\D/g, "");
 
-
-header .icon-cart {
-  position: relative;
-  right: 70px;
-}
-
-header .icon-cart span {
-  display: flex;
-  width: 25px;
-  height: 25px;
-  background-color: red;
-  justify-content: center;
-  align-items: center;
-  color: #fff;
-  border-radius: 50%;
-  position: absolute;
-  top: 50%;
-  right: -8px;
-}
-
-header .title {
-  position: absolute;
-  left: 20px; /* Keep it on the far left */
-}
-
-.listProduct .item img {
-  width: 200px;
-  height: 200px;
-  object-fit: cover;
-  border-radius: 4px;
+  // Trim to allowed number of digits
+  if (value.length > maxLength) {
+    value = value.slice(0, maxLength);
   }
 
-.listProduct {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  text-align: center;
-  gap: 0px;
+  // Prevent 0 or empty value
  
-  position: relative;
+
+  qtyInput.value = value;
+});
+mclose.addEventListener("click", () => {
+  modal.style.display = "none";
+});
  
-}
 
-.section-line {
-  width: 90%;
-  height: 1px;
-  background-color: #ccc;
-  margin: 20px auto 10px auto; /* top spacing, centered */
-}
-.section h2{
-  text-align: center;
-font-size: 27px;
-font-weight: 300;
-}
-.sections{
+
+  modal.style.display = "flex";
+};
+
  
-  padding: 30px;
-}
  
-.listProduct .item {
-  border-radius: 0px;
-  cursor: pointer;
-  padding: 20px;
-  transition: opacity 0.3s ease;
-}
 
-.listProduct .item:hover {
-  opacity: 0.6; /* or any value less than 1 for fading effect */
-}
-
-.listProduct .item h2 {
-  font-weight: 500;
-  font-size: large;
-}
-
-.listProduct .item .price {
-  letter-spacing: 1px;
-  font-size: medium;
-}
-
-.listProduct .item button {
-  background-color: #353432;
-  color: #eee;
-  padding: 5px 10px;
-  border-radius: 20px;
-  margin-top: 10px;
-  border: none;
-  cursor: pointer;
-}
-.cartTab {
-  width: 400px;
-  background-color: #353432;
-  color: #eee;
-  position: fixed;
-  top: 0;
-  right: -500px;
-  bottom: 0;
-  z-index: 15 !important;
-  display: grid;
-  grid-template-rows: 70px 1fr 70px;
-  transition: 0.65s;
-}
-body.showCart .cartTab {
-  right: 0;
-}
-body.showCart .container {
-  transform: translateX(-250px);
-}
-
-.cartTab h1 {
-  padding: 20px;
-  margin: 0;
-  font-weight: 300;
-}
-.btn button{
-  font-size: 16px;
-  border-radius: 0px;
-}
-.cartTab .btn {
-  display: grid;
+// Show modal on item or button click
+productDiv.addEventListener("click", (e) => {
+  if (!e.target.classList.contains("addCart")) showModal(item);
+});
+productDiv.querySelector(".addCart").addEventListener("click", (e) => {
+  e.stopPropagation();
+  showModal(item);
+});
+    
  
-  grid-template-columns: repeat(2, 1fr);
-}
-.cartTab .listCart .item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 10px;
-  gap:20px;
-  border-bottom: 1px solid #ccc;
-}
-
-.cartTab .listCart .item .image img {
-  width: 120px;
-  height: 120px;
-  object-fit: cover;
-  border-radius: 4px ;
-}
-
-.cartTab .listCart .item .totalPrice {
-  margin-top: auto;
-  font-weight: bold;
-  font-size: 14px;
-  text-align: center;
-}
-
-
-.listCart .quantity span {
-  display: inline-block;
-  width: 25px;
-  height: 25px;
-  background-color: #eee;
-  color: #555;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.listCart .quantity span:nth-child(2) {
-  background-color: transparent;
-  color: #eee;
-}
-
-.listCart .item:nth-child(2) {
-  background-color: #555;
-}
-
-.listCart {
-  overflow: auto;
-}
-
-.listCart::-webkit-scrollbar {
-  width: 0;
-}
-
-@media only screen and (max-width: 992px) {
-  .listProduct {
-    grid-template-columns: repeat(3, 1fr);
+// Close modal when clicking outside the content
+modal.addEventListener("click", (e) => {
+  if (e.target === modal) {
+    modal.style.display = "none";
   }
-}
-
-/* mobile */
-@media (max-width: 768px) {
-  .listProduct {
-    grid-template-columns: repeat(2, 1fr);
-  }
+});
  
-}
-.btn button{
-cursor: pointer;
-}
-.checkout {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  overflow: scroll;
-  background-color: #555;
-  padding: 20px;
-  border-radius: 10px;
-  width: 90vw;
-  max-width: 500px;
-  max-height: 600px;
-  z-index: 99999;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-}
-
-.checkout .checkout-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
-  margin-bottom: 20px;
-}
-
-.checkout .checkout-header h2 {
-  color: #fff; /* White text for better contrast */
-  margin: 0;
-  font-size: 24px;
-}
-
-.checkout .close-checkout {
-  background-color: transparent;
-  border: none;
-  font-size: 18px;
-  color: #fff; /* White text for better contrast */
-  cursor: pointer;
-}
-
-.checkout .checkout-list {
-  background-color: #666; /* Slightly lighter gray background for the list */
-  padding: 15px;
-  border-radius: 8px;
-  overflow-y: auto;
-  max-height: 300px; /* Limit height and make scrollable if too many items */
-}
-
-.checkout .checkout-list .item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  color: #fff; /* White text for the items */
-}
-
-.checkout .checkout-list .item .image {
-  width: 80px;
-  height: 80px;
-  flex-shrink: 0;
-}
-
-.checkout .checkout-list .item .image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.checkout .checkout-list .item .name {
-  font-size: 14px;
-  flex: 1;
-  margin-left: 15px;
-}
-
-.checkout .checkout-list .item .totalPrice {
-  font-size: 16px;
-  font-weight: bold;
-}
-
-.checkout .total-price {
-  font-size: 18px;
-  font-weight: bold;
-  color: #fff; /* White text for total price */
-  text-align: right;
-  margin-top: 20px;
-}
-
-/* Overlay that covers the page and fades the background */
-.overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
-  z-index: 999; /* Just below the checkout modal */
-  display: none; /* Initially hidden */
-}
-
-/* Fading background when checkout is active */
-body.modal-open {
-  pointer-events: none; /* Disable interaction with the rest of the page */
-  overflow: hidden; /* Disable scrolling */
-}
-.cartTab .name{
-  text-align: left;
-    font-size: 14px;
-}
-/* Allow interaction only with the checkout */
-body.modal-open .checkout,
-body.modal-open .overlay {
-  pointer-events: auto;
-}
-@media (max-width: 400px) {
-.cartTab .name{
-  text-align: left;
-    font-size: 14px;
-}
-}
-
-@media (max-width: 650px) {
-.center-header1{
-  text-align: left;
-  position: relative;
-  left: 20px;
-}
-
-.title{
-  display:none
-}
-}
-
-@media (max-width: 650px) {
-.center-header1{
-    display:block;
-   
-       }
 
 
-       header .center-header{
-        display:none;
-           }
+  });
+
+    // Append listProduct to section, then to sections container
+    sectionDiv.appendChild(listProduct);
+    sectionsContainer.appendChild(sectionDiv);
+  });
+}
+const loadCartFromMemory = () => {
+    const savedCart = localStorage.getItem("cart");
+    if (savedCart) {
+      carts = JSON.parse(savedCart);
+      addCartToHTML();
+    }
+  };
+const addCartToMemory = () => {
+    localStorage.setItem("cart", JSON.stringify(carts));
+  };
+  
+  const addCartToHTML = () => {
+    listCart.innerHTML = "";
+    let totalQuantity = 0;
+  
+    carts.forEach((cartItem) => {
+      totalQuantity += cartItem.quantity;
+  
+      const product = listProducts.find(p => p.id === cartItem.product_id);
+      if (!product) return;
+  
+      const maxNameLength = 30;
+      const nameShort = product.name.length > maxNameLength
+        ? product.name.slice(0, maxNameLength) + "..."
+        : product.name;
+      
+      const cartDiv = document.createElement("div");
+      cartDiv.classList.add("item");
+      cartDiv.dataset.id = cartItem.product_id;
+      cartDiv.innerHTML = `
+      <div class="image">
+        <img src="${product.image}">
+      </div>
+      <div class="name">${nameShort}</div>
+      <div class="quantity">
+        <span class="minus">-</span>
+        <span>${cartItem.quantity}</span>
+        <span class="plus">+</span>
+      </div>
+      <div class="totalPrice">$${(product.price * cartItem.quantity).toFixed(2)}</div>
+    `;
+    
+  
+      listCart.appendChild(cartDiv);
+    });
+
+    checkOutBtn.disabled = carts.length === 0;
+
+  
+  // Load cart from localStorage
+ 
+ 
+    iconCartSpan.innerText = totalQuantity;
+  
+    // Add + and - listeners
+    document.querySelectorAll(".plus").forEach((plusBtn) => {
+        plusBtn.addEventListener("click", () => {
+          const productId = plusBtn.closest(".item").dataset.id;
+          const cartItem = carts.find(c => c.product_id === productId);
+          const product = listProducts.find(p => p.id === productId);
+      
+          if (cartItem && product) {
+            const maxStock = product.stock || 0; // fallback in case `stock` wasn't saved
+            const currentQty = cartItem.quantity;
+      
+            // 🔒 Don't increase if it will exceed stock
+            if (currentQty < maxStock) {
+              cartItem.quantity += 1;
+              addCartToHTML();
+              addCartToMemory();
+            } else {
+              alert(`You can't add more than ${maxStock} of "${product.name}"`);
+            }
           }
-           @media (max-width: 470px) {
-           .listProduct {
-            grid-template-columns: repeat(1, 1fr);
+        });
+      });
+      
+  
+    document.querySelectorAll(".minus").forEach((minusBtn) => {
+      minusBtn.addEventListener("click", () => {
+        const productId = minusBtn.closest(".item").dataset.id;
+        const cartItem = carts.find(c => c.product_id === productId);
+        if (cartItem) {
+          cartItem.quantity -= 1;
+          if (cartItem.quantity <= 0) {
+            carts = carts.filter(c => c.product_id !== productId);
+          }
+          addCartToHTML();
+          addCartToMemory();
+        }
+      });
+    });
+  };
+  const checkOutBtn = document.querySelector(".checkOut");
+  const checkoutSection = document.querySelector(".overlay");
+ 
+  const totalPriceEl = document.querySelector(".total-price");
+  const closeCheckoutBtn = document.querySelector(".close-checkout");
+  
+  const formModal = document.querySelector(".form-modal");
+  const checkoutForm = document.getElementById("checkoutForm");
+  
+  // Show checkout
+  checkOutBtn.addEventListener("click", () => {
+    if (carts.length === 0) return;
+  
+    checkoutSection.style.display = "block";
+    checkoutList.innerHTML = "";
+    let total = 0;
+    const maxNameLength = 15; // Or whatever limit you want
+  
+    carts.forEach(item => {
+      const product = listProducts.find(p => p.id === item.product_id);
+      if (!product) return;
+  
+      const nameShort = product.name.length > maxNameLength
+        ? product.name.slice(0, maxNameLength) + "..."
+        : product.name;
+  
+      const itemDiv = document.createElement("div");
+      itemDiv.classList.add("item");
+      itemDiv.innerHTML = `
+        <div class="image"><img src="${product.image}" alt=""></div>
+        <div class="name">${nameShort}</div>
+        <div class="totalprice">$${(product.price * item.quantity).toFixed(2)}</div>
+      `;
+      checkoutList.appendChild(itemDiv);
+      total += product.price * item.quantity;
+    });
+  
+    totalPriceEl.innerText = `Total: $${total.toFixed(2)}`;
+  
+    document.getElementById("showFormModal").addEventListener("click", () => {
+      formModal.style.display = "flex";
+    });
+  });
+  
+  
+  // Close checkout section
+  closeCheckoutBtn.addEventListener("click", () => {
+    checkoutSection.style.display = "none";
+  });
+
+  function openPaypalModal() {
+    document.getElementById("paypalModal").style.display = "flex";
+  }
+  
+  function closePaypalModal() {
+    document.getElementById("paypalModal").style.display = "none";
+  }
+  
+
+  async function saveOrderAndUpdateStock(name, email, phone, countryCodeValue, countryLabel, pickup, carts) {
+    try {
+      const orderItems = carts.map(c => {
+        const product = listProducts.find(p => p.id === c.product_id);
+        return {
+          id: c.product_id,
+          itemName: product?.name || "Unnamed Item",  // ✅ renamed to avoid conflict
+          quantity: c.quantity,
+          price: product?.price || 0,
+          image: product?.image || ""
+        };
+      });
+      
+  
+      const orderData = {
+        name,
+        email,
+        phone,
+        country: {
+          code: countryCodeValue,
+          label: countryLabel
+        },
+        pickup,
+        items: orderItems,
+        status:'pending',
+        timestamp: new Date().toISOString()
+      };
+  
+      // ✅ Add order to Firestore
+      await addDoc(collection(db, "orders"), orderData);
+  
+      // ✅ Update stock
+      for (const cartItem of carts) {
+        const [sectionName, index] = cartItem.product_id.split("-");
+        const sectionsSnapshot = await getDocs(collection(db, "sections"));
+  
+        for (const sectionDoc of sectionsSnapshot.docs) {
+          const sectionData = sectionDoc.data();
+          if (sectionData.sectionName === sectionName) {
+            const items = [...sectionData.items];
+            const itemIndex = parseInt(index);
+            if (items[itemIndex]) {
+              items[itemIndex].stock -= cartItem.quantity;
+  
+              const sectionRef = doc(db, "sections", sectionDoc.id);
+              await updateDoc(sectionRef, { items });
+            }
           }
         }
+      }
+  
+      alert("Order placed!");
+      addCartToHTML();
+    } catch (err) {       console.error("Error saving order:", err);
+      alert("Something went wrong. Try again.\n" + (err.message || ""));
+    }
+    
+      a 
+  }
 
-.checkOut:disabled {
- 
-    background-color: #ccc; /* <-- replace this with your preferred disabled color */
- 
-    cursor: not-allowed;
-    opacity: 0.9;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const checkoutForm = document.getElementById("checkoutForm");
+  
+    if (checkoutForm) {
+      checkoutForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+  
+        const name = document.getElementById("name").value.trim();
+        const email = document.getElementById("email").value.trim();
+        const phone = document.getElementById("phone").value.trim();
+        const pickup = document.getElementById("pickup").value.trim();
+        const countryCodeElement = document.getElementById("countryCode");
+        const countryCodeValue = countryCodeElement.value; // e.g. "+33"
+        const countryLabel = countryCodeElement.options[countryCodeElement.selectedIndex].text; // e.g. "🇫🇷 +33 (France)"
+        
+        
+        
+  
+        if (!name || !email || !phone || !pickup || !countryCodeValue ) {
+          alert("Please fill in all fields.");
+          return;
+        }
+  
+        // Calculate total in dollars and convert to naira
+        let totalUSD = 0;
+        carts.forEach(item => {
+          const product = listProducts.find(p => p.id === item.product_id);
+          if (product) {
+            totalUSD += product.price * item.quantity;
+          }
+        });
+  
+        const totalNaira = Math.round(totalUSD * 1500); // Convert to Naira
+  
+        // Open Paystack payment modal
+        const handler = PaystackPop.setup({
+          key: "pk_test_cb3826dfb6732cf27093aa151b352fb821871dc7",
+          email: email,
+          amount: totalNaira * 100, // in kobo
+          currency: "NGN",
+          ref: "ORD-" + Math.floor(Math.random() * 1000000000),
+          metadata: {
+            custom_fields: [
+              {
+                display_name: name,
+                variable_name: "phone",
+                value: phone
+              }
+            ]
+          },
+          callback: function(response) {
+            document.getElementById("loaderOverlay").style.display = "flex";
+          
+            (async () => {
+              try {
+                const currentCart = carts.map(c => {
+                  const product = listProducts.find(p => p.id === c.product_id);
+                  return {
+                    product_id: c.product_id,
+                    quantity: c.quantity,
+                    name: product?.name || "Unnamed",
+                    price: product?.price || 0,
+                    image: product?.image || ""
+                  };
+                });
+                
+                           await saveOrderAndUpdateStock(name, email, phone, countryCodeValue, countryLabel, pickup, currentCart);
+          
+                await sendOrderEmail({
+                  name,
+                  email,
+                  phone: `${countryCodeValue}${phone}`,
+                  pickup,
+                  timestamp: Date.now(),
+                  items: currentCart
+                });
+          
+           
+                addCartToHTML();
+                alert("Check your mail inbox for more info regarding your order!");
+                closePaystackModal();
+              } catch (err) {
+                console.error("❌ Something failed:", err);
+                alert("Payment succeeded, but something went wrong. Please contact support.");
+              } finally {
+                setTimeout(() => {
+                  document.getElementById("loaderOverlay").style.display = "none";
+                  carts.length = 0;
+                  localStorage.removeItem("cart");
+                  location.reload();
+                }, 300);
+              }
+            })();
+          }
+          
+,                         
+          
+          
+          onClose: function() {
+            alert("Payment cancelled.");
+            closePaystackModal();
+          }
+        });
+  
+        handler.openIframe();
+        openPaystackModal(); // Show modal background if needed
+      });
+    }
+  });
+
+  async function sendOrderEmail({ name, email, phone, pickup, timestamp, items }) {
+    // Ensure prices are parsed as numbers
+    const total = items.reduce((sum, item) => {
+      const itemPrice = parseFloat(item.price) || 0;
+      const itemQuantity = parseInt(item.quantity) || 0;
+      return sum + itemPrice * itemQuantity;
+    }, 0);
+  
+    // Format item lines for email
+    const itemLines = items.map(item =>
+      `Item: ${item.name} Quantity: ${item.quantity}`
+    ).join('');
+  
+    try {
+      await emailjs.send("service_w3zumfl", "template_kccavv8", {
+        name: name || "N/A",
+        email: email || "N/A",
+        phone: phone || "N/A",
+        pickup: pickup || "N/A",
+        timestamp: new Date(timestamp).toLocaleString(),
+        total: total.toFixed(2),
+        items_html: itemLines
+      });
+  
+      console.log("✅ Email sent successfully");
+    } catch (err) {
+      console.error("❌ Failed to send email:", err);
+    }
   }
   
- 
-
-
-@media (max-width: 390px) {
-
-  .cartTab {
-    width: 100vw;
-  }}
-
-  header .svg-icon {
-    margin-right: 20px; /* Add spacing between the mail and cart icons */
-  }
-
-
-
-  .item-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.7); /* dark overlay */
-    display: none; /* use JS to show/hide */
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-  }
-  
-  .item-modal-content {
-    width: 300px;
-    background: #fff;
-    padding: 20px;
-    border-radius: 12px;
-    position: relative;
-    text-align: center;
-    box-shadow: 0 0 15px rgba(0,0,0,0.25);
-  }
-  
-  .item-modal-content img {
-    width: 200px;
-    height: 200px;
-    object-fit: cover;
-    border-radius: 8px;
-    margin-bottom: 15px;
-  }
-  
-  .item-modal-content h2 {
-    font-size: 20px;
-    margin: 10px 0;
-  }
-  
-  .item-modal-content p {
-    font-size: 14px;
-    margin: 10px 0;
-  }
-  
-  .item-modal-content .stock {
-    font-weight: bold;
-    margin-bottom: 15px;
-  }
-  
-  .item-modal-content .proceed-btn {
-    padding: 10px 20px;
-    background-color: black;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-  }
-  
-  .quantity span {
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    cursor: pointer;
-  }
   
 
-  .buti-buti{
-    display: flex;
-    width: 150px;
-    gap: 10px;
-    margin-left: auto;
-    margin-right: auto;
- 
- 
-   
+  function openPaystackModal() {
+    document.getElementById("paystackModal").style.display = "flex";
   }
-
-
-  .buti-buti input{
-    margin-top: auto;
-    outline: none;
+  function closePaystackModal() {
+    document.getElementById("paystackModal").style.display = "none";
   }
+  
+  document.querySelector(".close-paystack-modal").addEventListener("click", () => {
+    closePaystackModal();
+  });
+  
+  
+  
+loadSectionsAndItems().then(() => {
+    loadCartFromMemory();
+  });
 
-  .buti-buti label{
-   bottom: 5px !important;
-    position: relative;
-  }
 
-
-
-
-  /* Form Modal Background */
-.form-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 99900;
-}
-
-/* Modal Content Box */
-.form-modal-content {
-  background-color: #fff;
-  padding: 30px 25px;
-  border-radius: 10px;
- position:relative;
- width: 400px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-  animation: popIn 0.3s ease;
-}
-
-/* Modal Animation */
-@keyframes popIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.85);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-#countryCode {
-  width: 180px;
-  padding: 10px 12px;
-  font-size: 16px;
-  border: 2px solid #ccc;
-  border-radius: 6px;
-  background-color: #fff;
-  color: #333;
-  appearance: none;
-  margin-bottom: 15px;;
-  transition: border-color 0.3s, box-shadow 0.3s;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
-
-#countryCode:focus {
-  border-color: #007BFF;
-  outline: none;
-  box-shadow: 0 0 5px rgba(0, 123, 255, 0.4);
-}
-
-#countryCode option {
-  padding: 8px;
-  font-size: 15px;
-}
-
-/* Form Fields */
-#checkoutForm input {
-  width: 92%;
-  padding: 12px 15px;
-  margin-bottom: 15px;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  transition: border-color 0.3s;
-}
-
-#checkoutForm input:focus {
-  border-color: #007bff;
-  outline: none;
-}
- 
-#showFormModal{
-  width: 100%;
-  margin-left: auto !important;
-  margin-right: auto !important;
-  padding: 12px;
-  background-color: #007bff;
-  color: white;
-  font-size: 1rem;
-  border: none;
-  font-weight: 700;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-/* Submit Button */
-#checkoutForm button {
-  width: 100%;
-  padding: 12px;
-  background-color: #007bff;
-  color: white;
-  font-size: 1rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-#checkoutForm button:hover {
-  background-color: #0056b3;
-}
-
-/* Optional: Close button (if needed later) */
-
-.close-form {
-  position: absolute;
-  top: 10px;
-  right: 15px;
-  font-size: 34px;
-  font-weight: 300;
-  cursor: pointer;
-}
 
  
-/* Modal backdrop */
-#paystackModal.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: none; /* default hidden */
-  justify-content: center;
-  align-items: center;
-  background-color: rgba(0, 0, 0, 0.6);
-  z-index: 9999;
-}
+const countryCodes = [
+  { code: "+355", country: "AL", name: "Albania", flag: "🇦🇱" },
+  { code: "+213", country: "DZ", name: "Algeria", flag: "🇩🇿" },
+  { code: "+376", country: "AD", name: "Andorra", flag: "🇦🇩" },
+  { code: "+244", country: "AO", name: "Angola", flag: "🇦🇴" },
+  { code: "+1", country: "AG", name: "Antigua & Barbuda", flag: "🇦🇬" },
+  { code: "+54", country: "AR", name: "Argentina", flag: "🇦🇷" },
+  { code: "+374", country: "AM", name: "Armenia", flag: "🇦🇲" },
+  { code: "+297", country: "AW", name: "Aruba", flag: "🇦🇼" },
+  { code: "+61", country: "AU", name: "Australia", flag: "🇦🇺" },
+  { code: "+43", country: "AT", name: "Austria", flag: "🇦🇹" },
+  { code: "+994", country: "AZ", name: "Azerbaijan", flag: "🇦🇿" },
+  { code: "+973", country: "BH", name: "Bahrain", flag: "🇧🇭" },
+  { code: "+880", country: "BD", name: "Bangladesh", flag: "🇧🇩" },
+  { code: "+1", country: "BB", name: "Barbados", flag: "🇧🇧" },
+  { code: "+375", country: "BY", name: "Belarus", flag: "🇧🇾" },
+  { code: "+32", country: "BE", name: "Belgium", flag: "🇧🇪" },
+  { code: "+501", country: "BZ", name: "Belize", flag: "🇧🇿" },
+  { code: "+229", country: "BJ", name: "Benin", flag: "🇧🇯" },
+  { code: "+975", country: "BT", name: "Bhutan", flag: "🇧🇹" },
+  { code: "+591", country: "BO", name: "Bolivia", flag: "🇧🇴" },
+  { code: "+387", country: "BA", name: "Bosnia & Herzegovina", flag: "🇧🇦" },
+  { code: "+267", country: "BW", name: "Botswana", flag: "🇧🇼" },
+  { code: "+55", country: "BR", name: "Brazil", flag: "🇧🇷" },
+  { code: "+246", country: "IO", name: "British Indian Ocean Territory", flag: "🇮🇴" },
+  { code: "+673", country: "BN", name: "Brunei", flag: "🇧🇳" },
+  { code: "+359", country: "BG", name: "Bulgaria", flag: "🇧🇬" },
+  { code: "+226", country: "BF", name: "Burkina Faso", flag: "🇧🇫" },
+  { code: "+257", country: "BI", name: "Burundi", flag: "🇧🇮" },
+  { code: "+855", country: "KH", name: "Cambodia", flag: "🇰🇭" },
+  { code: "+237", country: "CM", name: "Cameroon", flag: "🇨🇲" },
+  { code: "+1", country: "CA", name: "Canada", flag: "🇨🇦" },
+  { code: "+238", country: "CV", name: "Cape Verde", flag: "🇨🇻" },
+  { code: "+599", country: "BQ", name: "Caribbean Netherlands", flag: "🇧🇶" },
+  { code: "+1", country: "KY", name: "Cayman Islands", flag: "🇰🇾" },
+  { code: "+236", country: "CF", name: "Central African Republic", flag: "🇨🇫" },
+  { code: "+235", country: "TD", name: "Chad", flag: "🇹🇩" },
+  { code: "+56", country: "CL", name: "Chile", flag: "🇨🇱" },
+  { code: "+86", country: "CN", name: "China", flag: "🇨🇳" },
+  { code: "+61", country: "CX", name: "Christmas Island", flag: "🇨🇽" },
+  { code: "+57", country: "CO", name: "Colombia", flag: "🇨🇴" },
+  { code: "+269", country: "KM", name: "Comoros", flag: "🇰🇲" },
+  { code: "+242", country: "CG", name: "Congo – Brazzaville", flag: "🇨🇬" },
+  { code: "+243", country: "CD", name: "Congo – Kinshasa", flag: "🇨🇩" },
+  { code: "+682", country: "CK", name: "Cook Islands", flag: "🇨🇰" },
+  { code: "+506", country: "CR", name: "Costa Rica", flag: "🇨🇷" },
+  { code: "+385", country: "HR", name: "Croatia", flag: "🇭🇷" },
+  { code: "+53", country: "CU", name: "Cuba", flag: "🇨🇺" },
+  { code: "+599", country: "CW", name: "Curaçao", flag: "🇨🇼" },
+  { code: "+357", country: "CY", name: "Cyprus", flag: "🇨🇾" },
+  { code: "+420", country: "CZ", name: "Czech Republic", flag: "🇨🇿" },
+  { code: "+45", country: "DK", name: "Denmark", flag: "🇩🇰" },
+  { code: "+253", country: "DJ", name: "Djibouti", flag: "🇩🇯" },
+  { code: "+1", country: "DM", name: "Dominica", flag: "🇩🇲" },
+  { code: "+1", country: "DO", name: "Dominican Republic", flag: "🇩🇴" },
+  { code: "+593", country: "EC", name: "Ecuador", flag: "🇪🇨" },
+  { code: "+20", country: "EG", name: "Egypt", flag: "🇪🇬" },
+  { code: "+503", country: "SV", name: "El Salvador", flag: "🇸🇻" },
+  { code: "+240", country: "GQ", name: "Equatorial Guinea", flag: "🇬🇶" },
+  { code: "+291", country: "ER", name: "Eritrea", flag: "🇪🇷" },
+  { code: "+372", country: "EE", name: "Estonia", flag: "🇪🇪" },
+  { code: "+251", country: "ET", name: "Ethiopia", flag: "🇪🇹" },
+  { code: "+500", country: "FK", name: "Falkland Islands", flag: "🇫🇰" },
+  { code: "+298", country: "FO", name: "Faroe Islands", flag: "🇫🇴" },
+  { code: "+679", country: "FJ", name: "Fiji", flag: "🇫🇯" },
+  { code: "+358", country: "FI", name: "Finland", flag: "🇫🇮" },
+  { code: "+33", country: "FR", name: "France", flag: "🇫🇷" },
+  { code: "+594", country: "GF", name: "French Guiana", flag: "🇬🇫" },
+  { code: "+689", country: "PF", name: "French Polynesia", flag: "🇵🇫" },
+  { code: "+241", country: "GA", name: "Gabon", flag: "🇬🇦" },
+  { code: "+220", country: "GM", name: "Gambia", flag: "🇬🇲" },
+  { code: "+995", country: "GE", name: "Georgia", flag: "🇬🇪" },
+  { code: "+49", country: "DE", name: "Germany", flag: "🇩🇪" },
+  { code: "+233", country: "GH", name: "Ghana", flag: "🇬🇭" },
+  { code: "+350", country: "GI", name: "Gibraltar", flag: "🇬🇮" },
+  { code: "+30", country: "GR", name: "Greece", flag: "🇬🇷" },
+  { code: "+299", country: "GL", name: "Greenland", flag: "🇬🇱" },
+  { code: "+1", country: "GD", name: "Grenada", flag: "🇬🇩" },
+  { code: "+1", country: "GU", name: "Guam", flag: "🇬🇺" },
+  { code: "+502", country: "GT", name: "Guatemala", flag: "🇬🇹" },
+  { code: "+224", country: "GN", name: "Guinea", flag: "🇬🇳" },
+  { code: "+245", country: "GW", name: "Guinea-Bissau", flag: "🇬🇼" },
+  { code: "+592", country: "GY", name: "Guyana", flag: "🇬🇾" },
+  { code: "+509", country: "HT", name: "Haiti", flag: "🇭🇹" },
+  { code: "+504", country: "HN", name: "Honduras", flag: "🇭🇳" },
+  { code: "+852", country: "HK", name: "Hong Kong", flag: "🇭🇰" },
+  { code: "+36", country: "HU", name: "Hungary", flag: "🇭🇺" },
+  { code: "+354", country: "IS", name: "Iceland", flag: "🇮🇸" },
+  { code: "+91", country: "IN", name: "India", flag: "🇮🇳" },
+  { code: "+62", country: "ID", name: "Indonesia", flag: "🇮🇩" },
+  { code: "+98", country: "IR", name: "Iran", flag: "🇮🇷" },
+  { code: "+964", country: "IQ", name: "Iraq", flag: "🇮🇶" },
+  { code: "+353", country: "IE", name: "Ireland", flag: "🇮🇪" },
+  { code: "+39", country: "IT", name: "Italy", flag: "🇮🇹" },
+  { code: "+1", country: "JM", name: "Jamaica", flag: "🇯🇲" },
+  { code: "+81", country: "JP", name: "Japan", flag: "🇯🇵" },
+  { code: "+254", country: "KE", name: "Kenya", flag: "🇰🇪" },
+  { code: "+856", country: "LA", name: "Laos", flag: "🇱🇦" },
+  { code: "+371", country: "LV", name: "Latvia", flag: "🇱🇻" },
+  { code: "+423", country: "LI", name: "Liechtenstein", flag: "🇱🇮" },
+  { code: "+370", country: "LT", name: "Lithuania", flag: "🇱🇹" },
+  { code: "+352", country: "LU", name: "Luxembourg", flag: "🇱🇺" },
+  { code: "+261", country: "MG", name: "Madagascar", flag: "🇲🇬" },
+  { code: "+265", country: "MW", name: "Malawi", flag: "🇲🇼" },
+  { code: "+60", country: "MY", name: "Malaysia", flag: "🇲🇾" },
+  { code: "+960", country: "MV", name: "Maldives", flag: "🇲🇻" },
+  { code: "+223", country: "ML", name: "Mali", flag: "🇲🇱" },
+  { code: "+356", country: "MT", name: "Malta", flag: "🇲🇹" },
+  { code: "+692", country: "MH", name: "Marshall Islands", flag: "🇲🇭" },
+  { code: "+596", country: "MQ", name: "Martinique", flag: "🇲🇶" },
+  { code: "+222", country: "MR", name: "Mauritania", flag: "🇲🇷" },
+  { code: "+230", country: "MU", name: "Mauritius", flag: "🇲🇺" },
+  { code: "+262", country: "YT", name: "Mayotte", flag: "🇾🇹" },
+  { code: "+52", country: "MX", name: "Mexico", flag: "🇲🇽" },
+  { code: "+691", country: "FM", name: "Micronesia", flag: "🇫🇲" },
+  { code: "+373", country: "MD", name: "Moldova", flag: "🇲🇩" },
+  { code: "+377", country: "MC", name: "Monaco", flag: "🇲🇨" },
+  { code: "+976", country: "MN", name: "Mongolia", flag: "🇲🇳" },
+  { code: "+382", country: "ME", name: "Montenegro", flag: "🇲🇪" },
+  { code: "+1", country: "MS", name: "Montserrat", flag: "🇲🇸" },
+  { code: "+212", country: "MA", name: "Morocco", flag: "🇲🇦" },
+  { code: "+258", country: "MZ", name: "Mozambique", flag: "🇲🇿" },
+  { code: "+264", country: "NA", name: "Namibia", flag: "🇳🇦" },
+  { code: "+674", country: "NR", name: "Nauru", flag: "🇳🇷" },
+  { code: "+977", country: "NP", name: "Nepal", flag: "🇳🇵" },
+  { code: "+31", country: "NL", name: "Netherlands", flag: "🇳🇱" },  
+  { code: "+64", country: "NZ", name: "New Zealand", flag: "🇳🇿" },
+  { code: "+505", country: "NI", name: "Nicaragua", flag: "🇳🇮" },
+  { code: "+227", country: "NE", name: "Niger", flag: "🇳🇪" },
+  { code: "+234", country: "NG", name: "Nigeria", flag: "🇳🇬" },
+  { code: "+683", country: "NU", name: "Niue", flag: "🇳🇺" },
+  { code: "+672", country: "NF", name: "Norfolk Island", flag: "🇳🇫" },
+  { code: "+47", country: "NO", name: "Norway", flag: "🇳🇴" },
+  { code: "+968", country: "OM", name: "Oman", flag: "🇴🇲" },
+  { code: "+92", country: "PK", name: "Pakistan", flag: "🇵🇰" },
+  { code: "+680", country: "PW", name: "Palau", flag: "🇵🇼" },
+  { code: "+970", country: "PS", name: "Palestine", flag: "🇵🇸" },
+  { code: "+507", country: "PA", name: "Panama", flag: "🇵🇦" },
+  { code: "+675", country: "PG", name: "Papua New Guinea", flag: "🇵🇬" },
+  { code: "+595", country: "PY", name: "Paraguay", flag: "🇵🇾" },
+  { code: "+51", country: "PE", name: "Peru", flag: "🇵🇪" },
+  { code: "+63", country: "PH", name: "Philippines", flag: "🇵🇭" },
+  { code: "+48", country: "PL", name: "Poland", flag: "🇵🇱" },
+  { code: "+351", country: "PT", name: "Portugal", flag: "🇵🇹" },
+  { code: "+1", country: "PR", name: "Puerto Rico", flag: "🇵🇷" },
+  { code: "+974", country: "QA", name: "Qatar", flag: "🇶🇦" },
+  { code: "+262", country: "RE", name: "Réunion", flag: "🇷🇪" },
+  { code: "+40", country: "RO", name: "Romania", flag: "🇷🇴" },
+  { code: "+7", country: "RU", name: "Russia", flag: "🇷🇺" },
+  { code: "+250", country: "RW", name: "Rwanda", flag: "🇷🇼" },
+  { code: "+590", country: "BL", name: "Saint Barthélemy", flag: "🇧🇱" },
+  { code: "+290", country: "SH", name: "Saint Helena", flag: "🇸🇭" },
+  { code: "+1", country: "KN", name: "Saint Kitts & Nevis", flag: "🇰🇳" },
+  { code: "+1", country: "LC", name: "Saint Lucia", flag: "🇱🇨" },
+  { code: "+508", country: "PM", name: "Saint Pierre & Miquelon", flag: "🇵🇲" },
+  { code: "+1", country: "VC", name: "Saint Vincent & Grenadines", flag: "🇻🇨" },
+  { code: "+685", country: "WS", name: "Samoa", flag: "🇼🇸" },
+  { code: "+378", country: "SM", name: "San Marino", flag: "🇸🇲" },
+  { code: "+239", country: "ST", name: "São Tomé & Príncipe", flag: "🇸🇹" },
+  { code: "+966", country: "SA", name: "Saudi Arabia", flag: "🇸🇦" },
+  { code: "+221", country: "SN", name: "Senegal", flag: "🇸🇳" },
+  { code: "+381", country: "RS", name: "Serbia", flag: "🇷🇸" },
+  { code: "+248", country: "SC", name: "Seychelles", flag: "🇸🇨" },
+  { code: "+232", country: "SL", name: "Sierra Leone", flag: "🇸🇱" },
+  { code: "+65", country: "SG", name: "Singapore", flag: "🇸🇬" },
+  { code: "+421", country: "SK", name: "Slovakia", flag: "🇸🇰" },
+  { code: "+386", country: "SI", name: "Slovenia", flag: "🇸🇮" },
+  { code: "+677", country: "SB", name: "Solomon Islands", flag: "🇸🇧" },
+  { code: "+252", country: "SO", name: "Somalia", flag: "🇸🇴" },
+  { code: "+27", country: "ZA", name: "South Africa", flag: "🇿🇦" },
+  { code: "+82", country: "KR", name: "South Korea", flag: "🇰🇷" },
+  { code: "+211", country: "SS", name: "South Sudan", flag: "🇸🇸" },
+  { code: "+34", country: "ES", name: "Spain", flag: "🇪🇸" },
+  { code: "+94", country: "LK", name: "Sri Lanka", flag: "🇱🇰" },
+  { code: "+249", country: "SD", name: "Sudan", flag: "🇸🇩" },
+  { code: "+597", country: "SR", name: "Suriname", flag: "🇸🇷" },
+  { code: "+47", country: "SJ", name: "Svalbard & Jan Mayen", flag: "🇸🇯" },
+  { code: "+268", country: "SZ", name: "Swaziland", flag: "🇸🇿" },
+  { code: "+46", country: "SE", name: "Sweden", flag: "🇸🇪" },
+  { code: "+41", country: "CH", name: "Switzerland", flag: "🇨🇭" },
+  { code: "+963", country: "SY", name: "Syria", flag: "🇸🇾" },
+  { code: "+886", country: "TW", name: "Taiwan", flag: "🇹🇼" },
+  { code: "+992", country: "TJ", name: "Tajikistan", flag: "🇹🇯" },
+  { code: "+255", country: "TZ", name: "Tanzania", flag: "🇹🇿" },
+  { code: "+66", country: "TH", name: "Thailand", flag: "🇹🇭" },
+  { code: "+228", country: "TG", name: "Togo", flag: "🇹🇬" },
+  { code: "+690", country: "TK", name: "Tokelau", flag: "🇹🇰" },
+  { code: "+676", country: "TO", name: "Tonga", flag: "🇹🇴" },
+  { code: "+1", country: "TT", name: "Trinidad & Tobago", flag: "🇹🇹" },
+  { code: "+216", country: "TN", name: "Tunisia", flag: "🇹🇳" },
+  { code: "+90", country: "TR", name: "Turkey", flag: "🇹🇷" },
+  { code: "+993", country: "TM", name: "Turkmenistan", flag: "🇹🇲" },
+  { code: "+688", country: "TV", name: "Tuvalu", flag: "🇹🇻" },
+  { code: "+256", country: "UG", name: "Uganda", flag: "🇺🇬" },
+  { code: "+380", country: "UA", name: "Ukraine", flag: "🇺🇦" },
+  { code: "+44", country: "GB", name: "United Kingdom", flag: "🇬🇧" },
+  { code: "+1", country: "US", name: "United States", flag: "🇺🇸" },
+  { code: "+598", country: "UY", name: "Uruguay", flag: "🇺🇾" },
+  { code: "+998", country: "UZ", name: "Uzbekistan", flag: "🇺🇿" },
+  { code: "+256", country: "VU", name: "Vanuatu", flag: "🇻🇺" },
+  { code: "+58", country: "VE", name: "Venezuela", flag: "🇻🇪" },
+  { code: "+84", country: "VN", name: "Vietnam", flag: "🇻🇳" },
+  { code: "+678", country: "VU", name: "Vanuatu", flag: "🇻🇺" },
+  { code: "+681", country: "WF", name: "Wallis & Futuna", flag: "🇼🇫" },
+  { code: "+967", country: "YE", name: "Yemen", flag: "🇾🇪" },
+  { code: "+260", country: "ZM", name: "Zambia", flag: "🇿🇲" },
+  { code: "+263", country: "ZW", name: "Zimbabwe", flag: "🇿🇼" }
+];
 
-/* Modal box */
-#paystackModal .modal-content {
-  background-color: #fff;
-  padding: 30px 20px;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 400px;
-  position: relative;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-  text-align: center;
-}
 
-/* Close button */
-#paystackModal .close-paystack-modal {
-  position: absolute;
-  top: 15px;
-  right: 20px;
-  font-size: 34px;
-  color: #333;
-  font-weight: 300;
-  transition: color 0.2s ease-in-out;
-}
-
-#paystackModal .close-paystack-modal:hover {
-  color: #ff4d4d;
-}
-
-/* Heading */
-#paystackModal h2 {
-  font-size: 22px;
-  margin-bottom: 20px;
-  color: #111;
-}
-#loaderOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0,0,0,0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 99999 !important;
-}
-
-.loader {
-  border: 6px solid #f3f3f3;
-  border-top: 6px solid #222;
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-
-
-
-
-
-
-.out-of-stock {
-  filter: grayscale(100%);
-  position: relative;
-  opacity: 1; /* keep fully visible */
-}
-
-.out-of-stock-x {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 0;
-  left: 0;
-  font-size: 200px;
-  background-color: rgba(255, 255, 255, 0.4);
-  color: red;
-  font-weight: lighter;
-  z-index: 10; /* MUST be high */
-  pointer-events: none; /* Prevent hover over the X itself */
-}
-
-.out-of-stock-text {
-  color: red;
-  font-size: 15px;
-  margin-top: 5px;
-  font-weight: 500;
-}
+const select = document.getElementById("countryCode");
+  countryCodes
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.code;
+      opt.dataset.country = c.country;
+      opt.innerText = `${c.flag} ${c.code} (${c.name})`;
+      select.append(opt);
+    });
  
-.closerr{
-  position: absolute;
-  top: 10px;
-  right: 15px;
-  font-size: 34px;
-  font-weight: 300;
-  cursor: pointer;
-}
+
+  select.addEventListener("change", () => {
+    const selected = select.value;
+    const phoneInput = document.getElementById("phone");
+    if (!phoneInput.value.startsWith(selected)) {
+      phoneInput.value = selected;
+    }
+  });
+
+
+  document.querySelector(".close-form").addEventListener("click", () => {
+    const modal = document.getElementById("formModal");
+    const form = document.getElementById("checkoutForm");
+  
+    modal.style.display = "none";
+    form.reset();
+  });
+ 
+ 
+  
 
 
 
+ 
+  
+ 
+  document.querySelectorAll('.reload-text').forEach(el => {
+    el.addEventListener('click', () => {
+      location.reload();
+    });
+  });
+  
+  
+  async function loadLandingImage() {
+    try {
+      const snapshot = await getDocs(collection(db, "homeBackground"));
+  
+      if (!snapshot.empty) {
+        const doc = snapshot.docs[0];
+        const data = doc.data();
+  
+        if (data.imageUrl) {
+          const img = new Image();
+          img.src = data.imageUrl;
+        
+          img.onload = () => {
+            const landingSection = document.getElementById("landingSection");
+            landingSection.style.backgroundImage = `url(${data.imageUrl}&w=1200&auto=webp)`;
 
-.landing-hero {
-  position: relative;
-  height: 100vh;
-  background-color: #f0f0f0; /* or blur hash, tiny preview */
- background-size: cover;
-  background-position: center;
- z-index: 2 !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.landing-hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5); /* This creates the faded/dark overlay */
-  z-index: 1;
-}
-
-.landing-content {
-  position: relative;
-  z-index: 2;
-  color: white;
-  text-align: center;
-  padding: 40px;
-  border-radius: 12px;
-}
-
-.catalog-btn {
-  margin-top: 20px;
-  padding: 12px 24px;
-  font-size: 16px;
-  color: #fff;
-  background-color: transparent;
-  border: 1px solid #fff ;
-  border-radius: 2px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.catalog-btn:hover {
-  background-color: #ddd;
-  color: black;
-}
-
+          };
+        }
+        
+      } else {
+        console.warn("No document found in homeBackground collection.");
+      }
+    } catch (err) {
+      console.error("Failed to load landing image:", err);
+    }
+  }
+  
+  loadLandingImage();
+  
  
