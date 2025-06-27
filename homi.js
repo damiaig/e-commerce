@@ -876,34 +876,4 @@ const select = document.getElementById("countryCode");
     });
   });
   
-  
-  async function loadLandingImage() {
-    try {
-      const snapshot = await getDocs(collection(db, "homeBackground"));
-  
-      if (!snapshot.empty) {
-        const doc = snapshot.docs[0];
-        const data = doc.data();
-  
-        if (data.imageUrl) {
-          const img = new Image();
-          img.src = data.imageUrl;
-        
-          img.onload = () => {
-            const landingSection = document.getElementById("landingSection");
-            landingSection.style.backgroundImage = `url(${data.imageUrl}&w=1200&auto=webp)`;
-
-          };
-        }
-        
-      } else {
-        console.warn("No document found in homeBackground collection.");
-      }
-    } catch (err) {
-      console.error("Failed to load landing image:", err);
-    }
-  }
-  
-  loadLandingImage();
-  
  
