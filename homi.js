@@ -457,7 +457,7 @@ const addCartToMemory = () => {
       alert("Something went wrong. Try again.\n" + (err.message || ""));
     }
     
-      a 
+      
   }
 
 
