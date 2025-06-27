@@ -179,12 +179,12 @@ font-weight: 300;
   cursor: pointer;
 }
 .cartTab {
-  width: 400px;
+  width: 100%;
   background-color: #353432;
   color: #eee;
   position: fixed;
   top: 0;
-  right: -500px;
+  right: -100%;
   bottom: 0;
   z-index: 15 !important;
   display: grid;
@@ -805,6 +805,7 @@ body.modal-open .overlay {
  background-size: cover;
   background-position: center;
  z-index: 2 !important;
+ background-image: url('2C878F17-00DB-42A8-B809-49078B04BE4F.jpeg');
   display: flex;
   align-items: center;
   justify-content: center;
