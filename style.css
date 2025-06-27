@@ -203,6 +203,7 @@ body.showCart .container {
 }
 .btn button{
   font-size: 16px;
+  border-radius: 0px;
 }
 .cartTab .btn {
   display: grid;
@@ -780,6 +781,7 @@ body.modal-open .overlay {
 .landing-hero {
   position: relative;
   height: 100vh;
+  background-color: #f0f0f0; /* or blur hash, tiny preview */
  background-size: cover;
   background-position: center;
  z-index: 2 !important;
