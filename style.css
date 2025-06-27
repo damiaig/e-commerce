@@ -3,11 +3,12 @@
 body {
   font-family: "Poppins", sans-serif;
   margin: 0;
+  overflow-x: hidden !important;
 }
 body, html {
   font-family: "Poppins", sans-serif;
   margin: 0;
-  overflow-x: hidden; /* Prevents horizontal overflow */
+  overflow-x: hidden !important; /* Prevents horizontal overflow */
 }
  
 header h1{
@@ -40,6 +41,7 @@ header {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   padding: 20px 0;
   z-index: 9;
+  overflow-x: hidden !important;
   backdrop-filter: blur(1px);
 
   /* Fade and slide transition */
@@ -204,12 +206,22 @@ body.showCart .container {
 .btn button{
   font-size: 16px;
   border-radius: 0px;
+  width: 50%;
+
 }
-.cartTab .btn {
-  display: grid;
- 
-  grid-template-columns: repeat(2, 1fr);
+
+.checkOut{
+  border-radius: 0px;
+  border-left: solid black;
 }
+
+.close{
+  border-radius: 0px;
+  border: 0px;
+  background: #ccc;
+  border-right: solid black;
+}
+
 .cartTab .listCart .item {
   display: flex;
   flex-direction: column;
@@ -233,7 +245,14 @@ body.showCart .container {
   font-size: 14px;
   text-align: center;
 }
+.btn {
+  display: flex;
+  gap: 0px; /* optional spacing between buttons */
+}
 
+.btn button {
+  flex: 1; /* optional: makes both buttons equal width */
+}
 
 .listCart .quantity span {
   display: inline-block;
@@ -277,6 +296,7 @@ body.showCart .container {
 }
 .btn button{
 cursor: pointer;
+background-color: white;
 }
 .checkout {
   position: fixed;
@@ -775,7 +795,7 @@ body.modal-open .overlay {
   cursor: pointer;
 }
 
-
+ 
 
 
 .landing-hero {
