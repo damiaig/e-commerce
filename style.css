@@ -191,9 +191,18 @@ font-weight: 300;
   grid-template-rows: 70px 1fr 70px;
   transition: 0.65s;
 }
+
+body.showCart {
+  overflow: hidden !important;
+}
+
+
 body.showCart .cartTab {
   right: 0;
+  overflow-y: auto;
+  overflow-x: hidden; /* enable scroll only when open */
 }
+ 
 body.showCart .container {
   transform: translateX(-250px);
 }
