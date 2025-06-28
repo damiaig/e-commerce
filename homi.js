@@ -445,6 +445,7 @@ const addCartToMemory = () => {
               items[itemIndex].stock -= cartItem.quantity;
   
               const sectionRef = doc(db, "sections", sectionDoc.id);
+              console.log("Sending to Firestore:", JSON.stringify(items, null, 2));
               await updateDoc(sectionRef, { items });
             }
           }
