@@ -409,7 +409,7 @@ const addCartToMemory = () => {
           itemName: product?.name || "Unnamed Item",  // ✅ renamed to avoid conflict
           quantity: c.quantity,
           price: product?.price || 0,
-          image: product?.imageUrl || product?.image || ""
+          image: product?.image || ""
         };
       });
       
@@ -445,8 +445,21 @@ const addCartToMemory = () => {
               items[itemIndex].stock -= cartItem.quantity;
   
               const sectionRef = doc(db, "sections", sectionDoc.id);
-              console.log("Sending to Firestore:", JSON.stringify(items, null, 2));
-              await updateDoc(sectionRef, { items });
+            
+              const cleanedItems = items.map(item => ({
+                name: item.name,
+                description: item.description,
+                imageUrl: item.imageUrl,
+                price: item.price,
+                stock: item.stock
+              }));
+              console.log("Updating section:", sectionDoc.id);
+              console.log("Sending to Firestore (items):", JSON.stringify(cleanedItems, null, 2));
+              console.log(JSON.stringify(items[itemIndex], null, 2));
+
+              
+              await updateDoc(sectionRef, { items: cleanedItems });
+              
             }
           }
         }
