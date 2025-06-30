@@ -688,6 +688,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         <p><strong>Total:</strong> $${total.toFixed(2)}</p>
         <button class="view-items-btn" data-modal="${orderId}">View Items</button>
         <button class="status-btn" data-status="${index}">Status</button>
+        <button class="delete-order-btn" data-index="${index}">Delete</button>
+        
 
 <div id="status-modal-${index}" class="status-modal" style="display: none;">
   <div class="status-modal-content">
@@ -770,6 +772,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     });
     
+    
+
     // Attach modal events
     document.querySelectorAll(".view-items-btn").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -782,6 +786,26 @@ document.addEventListener("DOMContentLoaded", async () => {
       btn.addEventListener("click", () => {
         const index = btn.dataset.status;
         document.getElementById(`status-modal-${index}`).style.display = "flex";
+      });
+    });
+    document.querySelectorAll(".delete-order-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const index = btn.dataset.index;
+        const confirmDelete = confirm("Are you sure you want to delete this order?");
+        if (!confirmDelete) return;
+    
+        const docRef = docRefs[index].ref;
+        try {
+          await deleteDoc(docRef);
+          alert("🗑️ Order deleted.");
+          // Re-fetch and re-render orders
+          const snapshot = await getDocs(collection(db, "orders"));
+          allOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          renderOrders(allOrders, snapshot.docs);
+        } catch (err) {
+          console.error("❌ Failed to delete order:", err);
+          alert("Failed to delete order. Try again.");
+        }
       });
     });
     
