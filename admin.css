@@ -561,7 +561,7 @@ h1{
   margin: 6px 0;
 }
 
-.view-items-btn {
+.view-items-btn, .status-btn, .delete-order-btn {
   margin-top: 10px;
   padding: 8px 12px;
   background-color: #333;
