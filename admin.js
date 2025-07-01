@@ -62,7 +62,7 @@ onAuthStateChanged(auth, async (user) => {
   if (!user) {
     console.log("User is not authenticated.");
     sessionStorage.clear();
-    window.location.href = "admin.login.html";
+    window.location.href = "admin-login.html";
     return;
   }
   console.log("User is authenticated:", user);
@@ -337,11 +337,11 @@ function renderSections(sections, docIds) {
 
     const sectionHTML = `
     <div class="section-box" data-section-index="${secIndex}">
+    <h2 class="section-title">${section.sectionName}</h2>
     <div class="section-controls">
       <button class="add-item-btn" data-doc-id="${docIds[secIndex]}" data-sec-index="${secIndex}">Add Item</button>
       <button class="delete-section-btn" data-doc-id="${docIds[secIndex]}">Delete</button>
     </div>
-    <h2 class="section-title">${section.sectionName}</h2>
     <div class="filter-bar">
       <input type="text" placeholder="Filter by name..." class="filter-input">
       <input type="number" placeholder="Filter by quantity..." class="filter-quantity">
@@ -706,7 +706,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     
     <textarea class="status-message delivered-message" style="${order.status === 'delivered' ? '' : 'display:none;'}">Hi ${order.name}, your order has been delivered. Kindly confirm receipt. Thanks!</textarea><br>
     
-      <button type="submit" class="send-status-btn">Send Update</button>
+      <span type="submit" class="send-status-btn">Send Update</span>
     </form>
   </div>
 </div>
@@ -729,14 +729,29 @@ document.addEventListener("DOMContentLoaded", async () => {
       `;
 
       ordersContainer.appendChild(orderBox);
-    });
-    document.querySelectorAll(".status-form").forEach((form, index) => {
+
+      const form = orderBox.querySelector(".status-form");
+      const submitSpan = form.querySelector(".send-status-btn");
+      
+      // Listen for span click to trigger the form submission
+      submitSpan.addEventListener("click", () => {
+        form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+      });
+      
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
-    
+      
+        if (submitSpan.classList.contains("disabled")) return;
+      
+        const loader = document.getElementById("loaderOverlay");
+      
+        submitSpan.classList.add("disabled");
+        submitSpan.textContent = "Processing...";
+        loader.style.display = "block"; // 🔥 Show top-of-body loader
+      
         const selectedStatus = form.querySelector(`input[name="status-${index}"]:checked`)?.value;
         let message = "";
-    
+      
         if (selectedStatus === "pending") {
           message = form.querySelector(".pending-message").value.trim();
         } else if (selectedStatus === "complete") {
@@ -744,19 +759,44 @@ document.addEventListener("DOMContentLoaded", async () => {
         } else if (selectedStatus === "delivered") {
           message = form.querySelector(".delivered-message").value.trim();
         }
-    
+      
         const docRef = docRefs[index].ref;
-
+      
         try {
           await updateDoc(docRef, { status: selectedStatus });
-          alert("✅ Status updated!");
-          // Optionally send email here with `message`
+      
+          if (!order.email || order.email.trim() === "") {
+            alert("❌ No valid email found for this order.");
+            loader.style.display = "none";
+            return;
+          }
+      
+          await emailjs.send("service_w3zumfl", "template_a3rcx9f", {
+            to_name: order.name,
+            to_email: order.email,
+            message: message
+          });
+      
+          alert("✅ Status updated and email sent!");
+          window.location.reload(); // 🔁 Reload after success
         } catch (err) {
-          console.error("Error updating status:", err);
-          alert("❌ Failed to update status.");
+          console.error("Email sending error:", err);
+          alert("❌ Failed to update status or send email.");
+      
+          submitSpan.classList.remove("disabled");
+          submitSpan.textContent = "Send Update";
+          loader.style.display = "none"; // ❌ Hide on failure
         }
       });
+      
+      
+      
+      
     });
+    
+ 
+ 
+    
     document.querySelectorAll(".status-form").forEach((form, formIndex) => {
       const radios = form.querySelectorAll(`input[name="status-${formIndex}"]`);
       const pendingMsg = form.querySelector(".pending-message");
@@ -812,9 +852,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.querySelectorAll(".close-status-modal").forEach(close => {
       close.addEventListener("click", () => {
         const index = close.dataset.status;
-        document.getElementById(`status-modal-${index}`).style.display = "none";
+        const modal = document.getElementById(`status-modal-${index}`);
+        modal.classList.remove("fadeIn"); // remove open animation
+        modal.style.animation = "fadeOut 0.3s ease-out forwards"; // add fade out
+    
+        setTimeout(() => {
+          modal.style.display = "none";
+        }, 300); // match animation duration
       });
     });
+    
     
     document.addEventListener("click", (e) => {
       if (e.target.classList.contains("status-modal")) {
@@ -835,6 +882,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         e.target.style.display = "none";
       }
     });
+
+   
   }
 
   function applyFilters() {
@@ -854,104 +903,23 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   try {
     const snapshot = await getDocs(collection(db, "orders"));
-    allOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-renderOrders(allOrders, snapshot.docs);
+    
+    allOrders = snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
+      // sort from latest to oldest
+  
+    renderOrders(allOrders, snapshot.docs);
+  
     // Filter events
     filterNameInput.addEventListener("input", applyFilters);
     filterEmailInput.addEventListener("input", applyFilters);
     filterDateInput.addEventListener("change", applyFilters);
-
+  
   } catch (err) {
     console.error("Error loading orders:", err);
   }
+  
 });
 
-
-
-
-
- 
-const bgPreview = document.getElementById('bgPreview');
-const bgInput = document.getElementById('bgImageInput');
-const saveBtn = document.getElementById('saveBgBtn');
-
-let currentBgUrl = "";
-let newCompressedFile = null;
-
-async function loadAdminBgPreview() {
-  try {
-    const docRef = doc(db, "homeBackground", "main");
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      currentBgUrl = docSnap.data().imageUrl;
-      bgPreview.src = currentBgUrl;
-    }
-  } catch (err) {
-    console.error("Failed to load background image:", err.message);
-  }
-}
-
-bgInput.addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  try {
-    // ✅ Use the original file without compression
-    newCompressedFile = file;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      bgPreview.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  } catch (err) {
-    alert("❌ Failed to preview image");
-  }
-});
-
-saveBtn.addEventListener("click", async () => {
-  if (!newCompressedFile) {
-    alert("Please select a new image.");
-    return;
-  }
-
-  try {
-    const docRef = doc(db, "homeBackground", "main");
-    const docSnap = await getDoc(docRef);
-    const previousData = docSnap.exists() ? docSnap.data() : null;
-
-    // Delete previous image if path exists
-    if (previousData?.imagePath) {
-      try {
-        const oldRef = ref(storage, previousData.imagePath);
-        await deleteObject(oldRef);
-      } catch (err) {
-        console.warn("Couldn't delete old image:", err.message);
-      }
-    }
-
-    // Upload new image
-    const fileName = `bg_${Date.now()}_${newCompressedFile.name}`;
-    const storagePath = `backgrounds/${fileName}`;
-    const storageRef = ref(storage, storagePath);
-    const snapshot = await uploadBytes(storageRef, newCompressedFile);
-    const newUrl = await getDownloadURL(snapshot.ref);
-
-    // Save both URL and path
-    await setDoc(docRef, {
-      imageUrl: newUrl,
-      imagePath: storagePath,
-    });
-
-    alert("✅ Background image updated!");
-    currentBgUrl = newUrl;
-    newCompressedFile = null;
-  } catch (err) {
-    console.error("Error saving background image:", err);
-    alert("❌ Failed to save image.");
-  }
-});
-
-
-loadAdminBgPreview();
