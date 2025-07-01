@@ -70,12 +70,7 @@ h1{
     font-weight: normal;
     z-index: 10;
   }
-  .section-controls{
-  position: absolute;
-  display: flex;
- gap: 10px;
-  top: 30px;
-  right: 15px;}
+
   .add-item-btn {
  
     background: black;
@@ -111,17 +106,26 @@ h1{
       align-items: center;     /* Centers the content */
     }
   }  
-  @media (max-width: 400px) {
+  @media (max-width: 850px) {
   .section-controls{
-    position: absolute;
+ width: 300px;
+ margin-left: auto;
+ margin-right: auto;
     display: flex;
     flex-direction: column !important;
    gap: 10px;
-    top: 30px;
-    right: 15px;}
+ 
+ 
+  }
+
     .section-title{
-      margin-bottom: 50px !important;
+    text-align: center;
+      margin-bottom: 10px !important;
     }
+
+
+
+
   }
 
 
@@ -303,7 +307,8 @@ h1{
 
 .section-title {
   font-size: 20px;
-  margin-bottom: 30px;
+ 
+  margin-bottom: 10px !important;
 }
 
 .filter-bar {
@@ -415,7 +420,9 @@ h1{
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
- 
+ height: 450px;
+ overflow-x: hidden;
+ overflow-y: auto;
 }
 
 .item-card {
@@ -434,6 +441,18 @@ h1{
   .item-card {
     width: 40% !important;
  
+  }
+}
+
+
+@media (max-width: 500px) {
+  .section-controls{
+    width: 250px;
+  }
+}
+@media (max-width: 400px) {
+  .section-controls{
+    width: 180px;
   }
 }
  
@@ -622,33 +641,6 @@ h1{
 }
 
 
-#loaderOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0,0,0,0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 99999 !important;
-}
-
-.loader {
-  border: 6px solid #f3f3f3;
-  border-top: 6px solid #222;
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
 /* Flatpickr input box styling - grey aesthetic */
 .filter-date-order.flatpickr-input {
   background-color: #f3f3f3;
@@ -796,9 +788,148 @@ h1{
   max-width: 500px;
 }
 
+
+.section-controls{
+  position: relative;
+  display: flex;
+ gap: 10px;
+
+ 
+margin-bottom: 20px;
+
+}
+
+
+.close-status-modal {
+  position: absolute;
+  top: 10px;
+  right: 16px;
+  font-size: 40px;
+  font-weight: 300;
+  color: #333;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.close-status-modal:hover {
+  color: black;
+}
+.status-form label {
+  font-size: 15px;
+  letter-spacing: 0.3px;
+  display: block;
+  margin-bottom: -10px !important;
+  cursor: pointer;
+}
+
+/* Textarea styled like input */
 .status-message {
   width: 100%;
-  height: 80px;
-  margin-bottom: 10px;
-  display: block;
+  height: 90px;
+  resize: none;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  letter-spacing: 0.4px;
+  line-height: 1.4;
+  outline: none;
+  margin-top: 8px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+  transition: border 0.2s;
+}
+
+.status-message:focus {
+  border-color: #888;
+}
+
+ 
+
+.send-status-btn {
+  background-color: #333;
+  color: white;
+  padding: 10px 20px;
+  font-size: 15px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.send-status-btn:hover {
+  background-color: #000;
+  transform: scale(1.03);
+}
+
+.send-status-btn:disabled {
+  background-color: #999;
+  cursor: not-allowed;
+}
+
+/* Start hidden and faded out */
+.status-modal {
+  animation: fadeIn 0.3s ease-out forwards;
+  opacity: 0;
+}
+
+/* Fade-in animation */
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Modal content slide-up animation */
+.status-modal-content {
+  transform: translateY(40px);
+  opacity: 0;
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+@keyframes slideUp {
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+  }
+}
+
+
+#loaderOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center ;
+  align-items: center !important;
+  z-index: 99999 !important;
+}
+
+.loader {
+  border: 6px solid #f3f3f3;
+  border-top: 6px solid #222;
+  border-radius: 50%;
+  width: 50px;
+margin-left: auto;
+margin-right: auto;
+position: relative;
+top: 35%;
+  height: 50px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
