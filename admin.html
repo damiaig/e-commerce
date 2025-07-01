@@ -23,11 +23,12 @@
         </head>
         
         <body>
-          <div id="loaderOverlay" style="display:none;">
-            <div class="loader"></div>
-          </div> 
+         
 <h1>ADMIN PANEL
 </h1>
+<div id="loaderOverlay" style="display:none;">
+  <div class="loader"></div>
+</div> 
 <div class="page-divider">
   <div class="orders">
  
@@ -38,14 +39,10 @@
       <input type="text" placeholder="Filter by email..." class="filter-email-order">
       <input type="text" placeholder="Filter by date..." class="filter-date-order">
     </div>
-    
     <div id="ordersContainer"></div>
   </div>
-  
-      
-      
   <div class="items">
-<q></q>
+ 
     
   <button id="openModalBtn">Create New Section</button>
 
@@ -186,7 +183,12 @@
               -->
             </div>
             <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@1.0.17/dist/browser-image-compression.min.js"></script>
-
+            <script type="text/javascript"
+            src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js">
+    </script>
+            <script>
+              emailjs.init('OGJL_7MdLJz6Vjdof'); // Replace with your EmailJS public key
+            </script>
             <script type="module" src="admin.js"></script>
 
             <script>
@@ -200,13 +202,4 @@
                 });
               </script>
           </body>
-          
- 
-    
- 
-
- 
-  
- 
-  
 </html>
