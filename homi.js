@@ -454,10 +454,9 @@ const addCartToMemory = () => {
                 stock: item.stock
               }));
               console.log("Updating section:", sectionDoc.id);
-              console.log("Sending to Firestore (items):", JSON.stringify(cleanedItems, null, 2));
-              console.log(JSON.stringify(items[itemIndex], null, 2));
+     const payload = { items: cleanedItems };
+console.log("📦 KEYS:", Object.keys(payload)); // should only be ['items']
 
-              
               await updateDoc(sectionRef, { items: cleanedItems });
               
             }
