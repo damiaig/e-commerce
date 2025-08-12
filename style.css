@@ -5,6 +5,7 @@ body, html {
   font-family: "Aclonica", sans-serif;
   font-style: normal;
   margin: 0;
+  background-color: #fff;
   overflow-x: hidden !important; /* Prevents horizontal overflow */
 }
  
