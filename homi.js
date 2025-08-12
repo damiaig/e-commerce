@@ -52,202 +52,374 @@ closeCart.addEventListener("click", () => {
  
 const sectionsContainer = document.querySelector(".sections");
 
+let sectionsData = []; // store all sections and items for filtering
+
+
 async function loadSectionsAndItems() {
   const querySnapshot = await getDocs(collection(db, "sections"));
-  sectionsContainer.innerHTML = ""; // clear existing content
+  sectionsContainer.innerHTML = "";
+  sectionsData = []; // reset
+  listProducts = []; // reset
 
   querySnapshot.forEach((doc) => {
     const section = doc.data();
     const items = section.items || [];
 
-    // Create section container
+    // store in sectionsData for filtering
+    sectionsData.push({
+      sectionName: section.sectionName,
+      items: items
+    });
+
+    // create section container
     const sectionDiv = document.createElement("div");
     sectionDiv.classList.add("section");
 
-    // Add section name/title
-// Add horizontal line above title
-const hr = document.createElement("div");
-hr.classList.add("section-line");
+    // title
+    const hr = document.createElement("div");
+    hr.classList.add("section-line");
+    const sectionTitle = document.createElement("h2");
+    sectionTitle.classList.add("section-title");
+    sectionTitle.textContent = section.sectionName;
+    sectionDiv.appendChild(hr);
+    sectionDiv.appendChild(sectionTitle);
 
-const sectionTitle = document.createElement("h2");
-sectionTitle.classList.add("section-title");
-sectionTitle.textContent = section.sectionName;
+    // product list container
+    const listProductEl = document.createElement("div");
+    listProductEl.classList.add("listProduct");
 
-// Append the line and title to the section
-sectionDiv.appendChild(hr);
-sectionDiv.appendChild(sectionTitle);
-
-
-    // Create listProduct container
-    const listProduct = document.createElement("div");
-    listProduct.classList.add("listProduct");
-
-    // Add each product as innerHTML
     items.forEach((item, itemIndex) => {
-
-      const productDiv = document.createElement("div");
       const product_id = `${section.sectionName}-${itemIndex}`;
 
+      // store in global product list for filtering
+      listProducts.push({
+        id: product_id,
+        name: item.name.toLowerCase(),
+        category: item.category.toLowerCase(),
+        price: item.price,
+        imageUrl: item.imageUrl,
+        stock: item.stock
+      });
+
+      // product card
+      const productDiv = document.createElement("div");
       productDiv.classList.add("item");
-      
       productDiv.innerHTML = `
         <img class="product-img" src="${item.imageUrl}" alt="${item.name}">
         <h2>${item.name.length > 20 ? item.name.slice(0, 20) + '...' : item.name}</h2>
         <div class="price">$${item.price}</div>
-        <button class="addCart">Add To Cart</button>
       `;
 
-      listProducts.push({
-        id: product_id,
-        name: item.name,
-        price: item.price,
-        image: item.imageUrl,
-        stock: item.stock // 👈 Add this
-      });
+      // handle out of stock
       if (item.stock <= 0) {
         productDiv.classList.add("out-of-stock");
         productDiv.style.position = "relative";
-        productDiv.style.pointerEvents = "none"; // disable click
-      
-        // Add red X over the image
+        productDiv.style.pointerEvents = "none";
         const xOverlay = document.createElement("div");
         xOverlay.classList.add("out-of-stock-x");
         xOverlay.innerHTML = "&times;";
-
         productDiv.appendChild(xOverlay);
-      
-        // Add "Out of Stock" under the name
         const outOfStockText = document.createElement("p");
         outOfStockText.classList.add("out-of-stock-text");
         outOfStockText.textContent = "OUT OF STOCK";
         productDiv.appendChild(outOfStockText);
       }
-      
-      
-      
-      listProduct.appendChild(productDiv);
-      
 
+      // modal setup
       const modal = document.querySelector(".item-modal");
-const modalContent = document.querySelector(".item-modal-content");
+      const modalContent = document.querySelector(".item-modal-content");
 
-const showModal = () => {
-    const existingInCart = carts.find(c => c.product_id === product_id);
-    const alreadyInCart = existingInCart ? existingInCart.quantity : 0;
-    const availableStock = item.stock - alreadyInCart;
-  
-    modalContent.innerHTML = `
- <span class="closerr">&times;</span>
-      <img src="${item.imageUrl}" alt="${item.name}">
-      <h2>${item.name}</h2>
-      <p>${item.description}</p>
-      <div class="stock">Items Left: ${availableStock}</div>
-      <div class="buti-buti">
-        <label for="quantity" style="display:block; margin: 10px 0;">Quantity:</label>
-        <input type="number" id="quantity" min="1" max="${availableStock}" value="1" style="width: 80px; padding: 5px; margin-bottom: 15px;">
-      </div>
-      <button class="proceed-btn">Proceed</button>
-    `;
-const qtyInput = document.getElementById("quantity");
-const maxLength = item.stock.toString().length;
+      const showModal = () => {
+        const existingInCart = carts.find(c => c.product_id === product_id);
+        const alreadyInCart = existingInCart ? existingInCart.quantity : 0;
+        const availableStock = item.stock - alreadyInCart;
 
-qtyInput.setAttribute("maxlength", maxLength); // optional for mobile
- 
-const proceedBtn = modalContent.querySelector(".proceed-btn");
-const mclose = document.querySelector(".closerr");
- 
-  
-  
- 
- 
-  proceedBtn.addEventListener("click", () => {
-    const quantity = parseInt(qtyInput.value);
-    const existingInCart = carts.find(c => c.product_id === product_id);
-    const alreadyInCart = existingInCart ? existingInCart.quantity : 0;
-    const availableStock = item.stock - alreadyInCart;
-  
-    if (isNaN(quantity) || quantity < 1) {
-      alert("Please enter a valid quantity.");
-      return;
-    }
-  
-    if (quantity > availableStock) {
-      alert(`Only ${availableStock} left for you to add.`);
-      return;
-    }
-  
-    if (existingInCart) {
-      existingInCart.quantity += quantity;
-    } else {
-      carts.push({
-        product_id,
-        quantity
+        modalContent.innerHTML = `
+          <span class="closerr">&times;</span>
+          <div class="modal-grid">
+            <div class="modal-left">
+              <img src="${item.imageUrl}" alt="${item.name}">
+            </div>
+            <div class="modal-center">
+              <h2>${item.name}</h2>
+              <p>${item.description}</p>
+            </div>
+            <div class="modal-right">
+              <div class="stock">Items Left: ${availableStock}</div>
+              <div class="quantity">
+                <span class="qty-btn" id="decreaseQty">-</span>
+                <input type="number" id="quantity" min="1" max="${availableStock}" value="1" readonly>
+                <span class="qty-btn" id="increaseQty">+</span>
+              </div>
+              <button class="proceed-btn">Proceed</button>
+            </div>
+          </div>
+        `;
+
+        const qtyInput = document.getElementById("quantity");
+        const maxLength = item.stock.toString().length;
+
+        const increaseBtn = modalContent.querySelector("#increaseQty");
+        const decreaseBtn = modalContent.querySelector("#decreaseQty");
+
+        increaseBtn.addEventListener("click", () => {
+          let currentValue = parseInt(qtyInput.value) || 1;
+          if (currentValue < parseInt(qtyInput.max)) {
+            qtyInput.value = currentValue + 1;
+          }
+        });
+
+        decreaseBtn.addEventListener("click", () => {
+          let currentValue = parseInt(qtyInput.value) || 1;
+          if (currentValue > parseInt(qtyInput.min)) {
+            qtyInput.value = currentValue - 1;
+          }
+        });
+
+        qtyInput.setAttribute("maxlength", maxLength);
+
+        const proceedBtn = modalContent.querySelector(".proceed-btn");
+        const mclose = document.querySelector(".closerr");
+
+        proceedBtn.addEventListener("click", () => {
+          const quantity = parseInt(qtyInput.value);
+          const existingInCart = carts.find(c => c.product_id === product_id);
+          const alreadyInCart = existingInCart ? existingInCart.quantity : 0;
+          const availableStock = item.stock - alreadyInCart;
+
+          if (isNaN(quantity) || quantity < 1) {
+            alert("Please enter a valid quantity.");
+            return;
+          }
+
+          if (quantity > availableStock) {
+            alert(`Only ${availableStock} left for you to add.`);
+            return;
+          }
+
+          if (existingInCart) {
+            existingInCart.quantity += quantity;
+          } else {
+            carts.push({ product_id, quantity });
+          }
+
+          addCartToHTML();
+          addCartToMemory();
+          modal.style.display = "none";
+          alert(`Added ${quantity} unit${quantity > 1 ? "s" : ""} of "${item.name}" to cart`);
+          document.getElementById("burtizy")?.scrollIntoView({ behavior: "smooth" });
+        });
+
+        mclose.addEventListener("click", () => {
+          modal.style.display = "none";
+        });
+
+        modal.style.display = "flex";
+      };
+
+      productDiv.addEventListener("click", (e) => {
+        e.stopPropagation();
+        showModal();
       });
-    }
-  
-    addCartToHTML();
-    addCartToMemory();
-  
-    modal.style.display = "none";
-    alert(`Added ${quantity} unit${quantity > 1 ? "s" : ""} of "${item.name}" to cart`);
-  });
-  
-  
 
-qtyInput.addEventListener("input", () => {
-  let value = qtyInput.value;
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) {
+          modal.style.display = "none";
+        }
+      });
 
-  // Remove any non-digit characters
-  value = value.replace(/\D/g, "");
+      listProductEl.appendChild(productDiv);
+    });
 
-  // Trim to allowed number of digits
-  if (value.length > maxLength) {
-    value = value.slice(0, maxLength);
-  }
-
-  // Prevent 0 or empty value
- 
-
-  qtyInput.value = value;
-});
-mclose.addEventListener("click", () => {
-  modal.style.display = "none";
-});
- 
-
-
-  modal.style.display = "flex";
-};
-
- 
- 
-
-// Show modal on item or button click
-productDiv.addEventListener("click", (e) => {
-  if (!e.target.classList.contains("addCart")) showModal(item);
-});
-productDiv.querySelector(".addCart").addEventListener("click", (e) => {
-  e.stopPropagation();
-  showModal(item);
-});
-    
- 
-// Close modal when clicking outside the content
-modal.addEventListener("click", (e) => {
-  if (e.target === modal) {
-    modal.style.display = "none";
-  }
-});
- 
-
-
-  });
-
-    // Append listProduct to section, then to sections container
-    sectionDiv.appendChild(listProduct);
+    sectionDiv.appendChild(listProductEl);
     sectionsContainer.appendChild(sectionDiv);
   });
 }
+
+
+
+let currentSearchTerm = "";
+let currentCategoryFilter = "";
+function renderFilteredSections() {
+  const query = currentSearchTerm.trim().toLowerCase();
+  sectionsContainer.innerHTML = "";
+
+  const modal = document.querySelector(".item-modal");
+  const modalContent = document.querySelector(".item-modal-content");
+
+  sectionsData.forEach((section) => {
+    const filteredItems = section.items.filter(item => {
+      const categoryMatch = item.category.toLowerCase().includes(query);
+      const nameMatch = item.name.toLowerCase().includes(query);
+      const categoryFilterMatch = !currentCategoryFilter || item.category.toLowerCase() === currentCategoryFilter;
+      return (categoryMatch || nameMatch) && categoryFilterMatch;
+    });
+
+    if (filteredItems.length === 0) return;
+
+    const sectionDiv = document.createElement("div");
+    sectionDiv.classList.add("section");
+
+    const hr = document.createElement("div");
+    hr.classList.add("section-line");
+    const sectionTitle = document.createElement("h2");
+    sectionTitle.classList.add("section-title");
+    sectionTitle.textContent = section.sectionName;
+    sectionDiv.appendChild(hr);
+    sectionDiv.appendChild(sectionTitle);
+
+    const listProductEl = document.createElement("div");
+    listProductEl.classList.add("listProduct");
+
+    filteredItems.forEach((item, itemIndex) => {
+      const product_id = `${section.sectionName}-${itemIndex}`;
+
+      const productDiv = document.createElement("div");
+      productDiv.classList.add("item");
+      productDiv.innerHTML = `
+        <img class="product-img" src="${item.imageUrl}" alt="${item.name}">
+        <h2>${item.name.length > 20 ? item.name.slice(0, 20) + '...' : item.name}</h2>
+        <div class="price">$${item.price}</div>
+      `;
+
+      if (item.stock <= 0) {
+        productDiv.classList.add("out-of-stock");
+        productDiv.style.position = "relative";
+        productDiv.style.pointerEvents = "none";
+        const xOverlay = document.createElement("div");
+        xOverlay.classList.add("out-of-stock-x");
+        xOverlay.innerHTML = "&times;";
+        productDiv.appendChild(xOverlay);
+        const outOfStockText = document.createElement("p");
+        outOfStockText.classList.add("out-of-stock-text");
+        outOfStockText.textContent = "OUT OF STOCK";
+        productDiv.appendChild(outOfStockText);
+      }
+
+      // modal function
+      const showModal = () => {
+        const existingInCart = carts.find(c => c.product_id === product_id);
+        const alreadyInCart = existingInCart ? existingInCart.quantity : 0;
+        const availableStock = item.stock - alreadyInCart;
+
+        modalContent.innerHTML = `
+          <span class="closerr">&times;</span>
+          <div class="modal-grid">
+            <div class="modal-left">
+              <img src="${item.imageUrl}" alt="${item.name}">
+            </div>
+            <div class="modal-center">
+              <h2>${item.name}</h2>
+              <p>${item.description}</p>
+            </div>
+            <div class="modal-right">
+              <div class="stock">Items Left: ${availableStock}</div>
+              <div class="quantity">
+                <span class="qty-btn" id="decreaseQty">-</span>
+                <input type="number" id="quantity" min="1" max="${availableStock}" value="1" readonly>
+                <span class="qty-btn" id="increaseQty">+</span>
+              </div>
+              <button class="proceed-btn">Proceed</button>
+            </div>
+          </div>
+        `;
+
+        const qtyInput = document.getElementById("quantity");
+        const maxLength = item.stock.toString().length;
+
+        const increaseBtn = modalContent.querySelector("#increaseQty");
+        const decreaseBtn = modalContent.querySelector("#decreaseQty");
+
+        increaseBtn.addEventListener("click", () => {
+          let currentValue = parseInt(qtyInput.value) || 1;
+          if (currentValue < parseInt(qtyInput.max)) {
+            qtyInput.value = currentValue + 1;
+          }
+        });
+
+        decreaseBtn.addEventListener("click", () => {
+          let currentValue = parseInt(qtyInput.value) || 1;
+          if (currentValue > parseInt(qtyInput.min)) {
+            qtyInput.value = currentValue - 1;
+          }
+        });
+
+        qtyInput.setAttribute("maxlength", maxLength);
+
+        const proceedBtn = modalContent.querySelector(".proceed-btn");
+        const mclose = modalContent.querySelector(".closerr");
+
+        proceedBtn.addEventListener("click", () => {
+          const quantity = parseInt(qtyInput.value);
+          const existingInCart = carts.find(c => c.product_id === product_id);
+          const alreadyInCart = existingInCart ? existingInCart.quantity : 0;
+          const availableStock = item.stock - alreadyInCart;
+
+          if (isNaN(quantity) || quantity < 1) {
+            alert("Please enter a valid quantity.");
+            return;
+          }
+
+          if (quantity > availableStock) {
+            alert(`Only ${availableStock} left for you to add.`);
+            return;
+          }
+
+          if (existingInCart) {
+            existingInCart.quantity += quantity;
+          } else {
+            carts.push({ product_id, quantity });
+          }
+
+          addCartToHTML();
+          addCartToMemory();
+          modal.style.display = "none";
+          alert(`Added ${quantity} unit${quantity > 1 ? "s" : ""} of "${item.name}" to cart`);
+          document.getElementById("burtizy")?.scrollIntoView({ behavior: "smooth" });
+
+        });
+
+        mclose.addEventListener("click", () => {
+          modal.style.display = "none";
+        });
+
+        modal.style.display = "flex";
+      };
+
+      productDiv.addEventListener("click", (e) => {
+        e.stopPropagation();
+        showModal();
+      });
+
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) {
+          modal.style.display = "none";
+        }
+      });
+
+      listProductEl.appendChild(productDiv);
+    });
+
+    sectionDiv.appendChild(listProductEl);
+    sectionsContainer.appendChild(sectionDiv);
+  });
+}
+
+
+
+
+document.getElementById("searchInput").addEventListener("input", (e) => {
+  currentSearchTerm = e.target.value;
+  renderFilteredSections();
+});
+
+document.querySelectorAll(".filter-chips span").forEach(chip => {
+  chip.addEventListener("click", () => {
+    currentCategoryFilter = chip.getAttribute("value").toLowerCase();
+    renderFilteredSections();
+  });
+});
+
 const loadCartFromMemory = () => {
     const savedCart = localStorage.getItem("cart");
     if (savedCart) {
@@ -279,12 +451,13 @@ const addCartToMemory = () => {
       cartDiv.dataset.id = cartItem.product_id;
       cartDiv.innerHTML = `
       <div class="image">
-        <img src="${product.image}">
+      <img src="${product.imageUrl}" alt="${product.name}">
+
       </div>
       <div class="name">${nameShort}</div>
       <div class="quantity">
         <span class="minus">-</span>
-        <span>${cartItem.quantity}</span>
+        <span class="quan">${cartItem.quantity}</span>
         <span class="plus">+</span>
       </div>
       <div class="totalPrice">$${(product.price * cartItem.quantity).toFixed(2)}</div>
@@ -370,7 +543,8 @@ const addCartToMemory = () => {
       const itemDiv = document.createElement("div");
       itemDiv.classList.add("item");
       itemDiv.innerHTML = `
-        <div class="image"><img src="${product.image}" alt=""></div>
+        <div class="image"><img src="${product.imageUrl}" alt="${product.name}">
+        </div>
         <div class="name">${nameShort}</div>
         <div class="totalprice">$${(product.price * item.quantity).toFixed(2)}</div>
       `;
@@ -450,6 +624,7 @@ const addCartToMemory = () => {
                 name: item.name,
                 description: item.description,
                 imageUrl: item.imageUrl,
+                category: item.category,
                 price: item.price,
                 stock: item.stock
               }));
@@ -555,6 +730,7 @@ console.log("📦 KEYS:", Object.keys(payload)); // should only be ['items']
                 addCartToHTML();
                 alert("Check your mail inbox for more info regarding your order!");
                 closePaystackModal();
+           
               } catch (err) {
                 console.error("❌ Something failed:", err);
                 alert("Payment succeeded, but something went wrong. Please contact support.");
@@ -563,7 +739,9 @@ console.log("📦 KEYS:", Object.keys(payload)); // should only be ['items']
                   document.getElementById("loaderOverlay").style.display = "none";
                   carts.length = 0;
                   localStorage.removeItem("cart");
+                  
                   location.reload();
+                  document.getElementById("loaderOverlay").style.display = "none";
                 }, 300);
               }
             })();
