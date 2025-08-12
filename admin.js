@@ -210,6 +210,8 @@ itemForm.addEventListener("submit", async (e) => {
   const price = parseFloat(document.getElementById("itemPrice").value);
   const stock = parseInt(document.getElementById("itemStock").value);
   const imageInput = document.getElementById("itemImage");
+  const category = document.getElementById("category").value.trim();
+
   let imageUrl = null;
 
   try {
@@ -228,8 +230,9 @@ itemForm.addEventListener("submit", async (e) => {
       imageUrl = await getDownloadURL(snapshot.ref);
     }
   
-    if (name && !isNaN(price) && !isNaN(stock)) {
-      const itemData = { name, price, stock, description, imageUrl };
+    if (name && !isNaN(price) && !isNaN(stock) && category) {
+
+      const itemData = { name, price, stock, description, category, imageUrl };
   
       if (editingIndex !== null) {
         sectionItems[editingIndex] = itemData;
@@ -509,7 +512,8 @@ function openAddItemModal(docId) {
     const stock = parseInt(document.getElementById("itemStock").value);
     const description = document.getElementById("itemDescription").value.trim();
     const imageFile = document.getElementById("itemImage").files[0];
-  
+    const category = document.getElementById("category").value.trim();
+
     let imageUrl = "";
     if (imageFile) {
       try {
@@ -532,7 +536,7 @@ function openAddItemModal(docId) {
       }
     }
   
-    const newItem = { name, price, stock, description, imageUrl };
+    const newItem = { name, price, stock, description, category, imageUrl };
   
     const docRef = doc(db, "sections", docId);
     const docSnap = await getDoc(docRef);
@@ -557,6 +561,9 @@ function openEditModal(item, docId, itemIndex) {
   document.getElementById("editPrice").value = item.price;
   document.getElementById("editStock").value = item.stock;
   document.getElementById("editDesc").value = item.description;
+document.getElementById("editCategory").value= item.category
+
+
   document.getElementById("editItemModal").style.display = "flex";
 
   const form = document.getElementById("editItemForm");
@@ -567,6 +574,7 @@ function openEditModal(item, docId, itemIndex) {
       name: document.getElementById("editName").value.trim(),
       price: parseFloat(document.getElementById("editPrice").value),
       stock: parseInt(document.getElementById("editStock").value),
+      category: document.getElementById("editCategory").value.trim(),
       description: document.getElementById("editDesc").value.trim()
     };
 
