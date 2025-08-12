@@ -60,6 +60,13 @@
       <input type="text" id="editName" maxlength="30" placeholder="Item Name" required>
       <input type="number" id="editPrice" maxlength="18" placeholder="Price" required>
       <input type="number" id="editStock" maxlength="18" placeholder="Quantity" required>
+      <select id="editCategory" required>
+        <option value="" disabled selected>Pick a category</option>
+        <option value="shirts">Shirts</option>
+        <option value="pants">Pants</option>
+        <option value="shorts">Shorts</option>
+        <option value="caps">Caps</option>
+      </select>
       <textarea id="editDesc" placeholder="Description" maxlength="150"></textarea>
       <input type="file" id="editImage">
       <button type="submit">Save Changes</button>
@@ -137,6 +144,15 @@
         style="resize: none;" 
         required></textarea>
         <input type="number" id="itemPrice" maxlength="18" placeholder="Price" required>
+
+        <select id="category" required>
+          <option value="" disabled selected>Pick a category</option>
+          <option value="shirts">Shirts</option>
+          <option value="pants">Pants</option>
+          <option value="shorts">Shorts</option>
+          <option value="caps">Caps</option>
+        </select>
+        
         <input type="number" id="itemStock" maxlength="18" placeholder="Quantity" required>
         <input type="file" id="itemImage">
         <button type="submit" class="btn">Save</button>
@@ -201,7 +217,5 @@
                   e.preventDefault();
                 });
               </script>
-               
-      </script>
           </body>
 </html>
