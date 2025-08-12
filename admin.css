@@ -257,6 +257,9 @@ h1{
   outline: none;
 }
 
+.item-form textarea{
+  margin-bottom: 15px;
+}
 /* Submit button */
 .item-form .btn {
   width: 100%;
@@ -911,7 +914,7 @@ margin-bottom: 20px;
   height: 100%;
   background-color: rgba(0,0,0,0.6);
   display: flex;
-  justify-content: center ;
+  justify-content: center !;
   align-items: center !important;
   z-index: 99999 !important;
 }
@@ -932,4 +935,39 @@ top: 35%;
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+
+
+
+#category {
+  width: 95%;
+  padding: 8px 10px;
+
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  outline: none;
+  background-color: #fff;
+  color: #333;
+  appearance: none;
+  margin-bottom: 15px;
+}
+
+
+#category option {
+  padding: 8px;
+  font-size: 15px;
+}
+
+#editCategory{
+  width: 95%;
+  padding: 8px 10px;
+
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  outline: none;
+  background-color: #fff;
+  color: #333;
+  appearance: none;
+  margin-bottom: 5px;
 }
