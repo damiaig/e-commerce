@@ -25,17 +25,15 @@ import {
   doc
 } from "https://www.gstatic.com/firebasejs/9.16.0/firebase-firestore.js";
 
- 
 
+// ── AUTH GUARD ────────────────────────────────────────────────────────────────
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    // Redirect unauthenticated users
     sessionStorage.clear();
     window.location.href = "admin-login.html";
     return;
   }
 
-  // If user is logged in, check admin validation
   const sessionCode = sessionStorage.getItem("adminCode");
   if (!sessionCode) {
     sessionStorage.clear();
@@ -43,891 +41,782 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  const adminDocRef = doc(db, "adminAccess", user.uid);
+  const adminDocRef  = doc(db, "adminAccess", user.uid);
   const adminDocSnap = await getDoc(adminDocRef);
 
-  // If user is not an admin or the code doesn't match, log them out
   if (!adminDocSnap.exists() || adminDocSnap.data().code !== sessionCode) {
     sessionStorage.clear();
     window.location.href = "admin-login.html";
     return;
   }
-
-  // Admin validated, now load messages
- 
 });
 
 
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    console.log("User is not authenticated.");
-    sessionStorage.clear();
-    window.location.href = "admin-login.html";
-    return;
+// ── LOADER HELPERS ────────────────────────────────────────────────────────────
+function showLoader() { document.getElementById("loaderOverlay").style.display = "flex"; }
+function hideLoader() { document.getElementById("loaderOverlay").style.display = "none"; }
+
+
+// ── IMAGE UPLOAD HELPER (images only, min qty = 1) ───────────────────────────
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
+
+function validateImageFile(file) {
+  if (!file) return true; // no file is fine (optional)
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    alert("❌ Only image files are allowed (JPEG, PNG, WebP, GIF, AVIF).");
+    return false;
   }
-  console.log("User is authenticated:", user);
-  // Continue with admin validation...
-});
-
-
-window.addEventListener("DOMContentLoaded", () => {
-    const openModalBtn = document.getElementById("openModalBtn");
-    const sectionModal = document.getElementById("sectionModal");
-    const sectionForm = document.getElementById("sectionForm");
-    const closeModalBtn = document.getElementById("closeModalBtn");
-    const itemPreviewList = document.getElementById("itemPreviewList");
-    const itemsWrapper = document.getElementById("itemsWrapper");
-  
-    if (openModalBtn && sectionModal && sectionForm) {
-      openModalBtn.onclick = () => {
-        sectionModal.style.display = "flex";
-      };
-  
-      closeModalBtn.onclick = () => {
-        sectionModal.style.display = "none";
-        resetSectionModal();
-      };
-  
-      sectionForm.addEventListener("submit", () => {
-        sectionModal.style.display = "none";
-        resetSectionModal();
-      });
-    }
-  
-function resetSectionModal() {
-  // Reset form fields
-  sectionForm.reset();
-
-  // Clear preview list
-  itemPreviewList.innerHTML = "";
-
-  // Clear sectionItems array if used globally
-  sectionItems = [];
-
- 
-
- 
+  return true;
 }
 
-  });
-  
-
-
-// Elements
-const form = document.getElementById('sectionForm');
- 
-const itemPreviewList = document.getElementById('itemPreviewList');
-
- 
-// Handle form submit
-const sectionModal = document.getElementById("sectionModal");
-const closeModalBtn = document.getElementById("closeModalBtn");
-
-let sectionItems = []; // Resettable list of items per section
-
-// Submit form
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const submitBtn = form.querySelector("button[type='submit']");
-  submitBtn.disabled = true;
-  submitBtn.innerText = "Submitting...";
-
-  const sectionName = document.getElementById("sectionName").value.trim();
-
-  if (sectionName && sectionItems.length > 0) {
-    try {
-      await addDoc(collection(db, "sections"), {
-        sectionName,
-        items: sectionItems,
-        createdAt: new Date()
-      });
-
-      alert("✅ Section submitted!");
-      form.reset();
-      itemPreviewList.innerHTML = "";
-      sectionItems = [];
-      sectionModal.style.display = "none";
-    } catch (err) {
-      console.error("Error saving section:", err);
-      alert("❌ An error occurred while saving.");
+// Attach image-only filter to a file input
+function lockToImages(inputEl) {
+  inputEl.setAttribute("accept", "image/*");
+  inputEl.addEventListener("change", () => {
+    if (inputEl.files.length && !validateImageFile(inputEl.files[0])) {
+      inputEl.value = "";
     }
-  } else {
-    alert("Please add a section name and at least one item.");
-  }
+  });
+}
 
-  submitBtn.disabled = false;
-  submitBtn.innerText = "Submit Section";
+// Enforce min=1 on a number input (quantity)
+function enforceMinOne(inputEl) {
+  inputEl.setAttribute("min", "1");
+  inputEl.addEventListener("input", () => {
+    const v = parseInt(inputEl.value);
+    if (!isNaN(v) && v < 1) inputEl.value = 1;
+  });
+  inputEl.addEventListener("blur", () => {
+    if (inputEl.value === "" || parseInt(inputEl.value) < 1) inputEl.value = 1;
+  });
+}
+
+// Apply restrictions once DOM is ready
+window.addEventListener("DOMContentLoaded", () => {
+  lockToImages(document.getElementById("itemImage"));
+  lockToImages(document.getElementById("editImage"));
+  enforceMinOne(document.getElementById("itemStock"));
+  enforceMinOne(document.getElementById("editStock"));
 });
 
 
-// Close modal when clicking the "×" button
-closeModalBtn.addEventListener("click", () => {
+// ══════════════════════════════════════════════════════════════════════════════
+// SECTION / ITEM MANAGEMENT
+// ══════════════════════════════════════════════════════════════════════════════
+
+let newSectionItems        = [];
+let newSectionEditingIndex = null;
+
+
+// ── NEW SECTION MODAL ─────────────────────────────────────────────────────────
+const openModalBtn  = document.getElementById("openModalBtn");
+const sectionModal  = document.getElementById("sectionModal");
+const closeModalBtn = document.getElementById("closeModalBtn");
+const sectionForm   = document.getElementById("sectionForm");
+
+openModalBtn.onclick = () => {
+  resetNewSectionModal();
+  sectionModal.style.display = "flex";
+};
+
+closeModalBtn.onclick = () => {
   sectionModal.style.display = "none";
-  itemForm.reset();
-  editingIndex = null; // 🔁 Reset again here
-});
+  resetNewSectionModal();
+};
 
-// Close modal when clicking outside modal content
 window.addEventListener("click", (e) => {
   if (e.target === sectionModal) {
     sectionModal.style.display = "none";
-    itemForm.reset();
-    editingIndex = null; // 🔁 Reset again here
+    resetNewSectionModal();
   }
 });
 
+function resetNewSectionModal() {
+  sectionForm.reset();
+  newSectionItems        = [];
+  newSectionEditingIndex = null;
+  renderNewSectionPreview();
+}
 
-  
+sectionForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const sectionName = document.getElementById("sectionName").value.trim();
+
+  if (!sectionName)                { alert("Please enter a section name."); return; }
+  if (newSectionItems.length === 0) { alert("Please add at least one item."); return; }
+
+  const submitBtn = sectionForm.querySelector("#submitSection");
+  submitBtn.disabled    = true;
+  submitBtn.textContent = "Submitting…";
+
+  try {
+    await addDoc(collection(db, "sections"), {
+      sectionName,
+      items: newSectionItems,
+      createdAt: new Date()
+    });
+    alert("✅ Section submitted!");
+    sectionModal.style.display = "none";
+    resetNewSectionModal();
+    loadSections();
+  } catch (err) {
+    console.error("Error saving section:", err);
+    alert("❌ An error occurred while saving.");
+  }
+
+  submitBtn.disabled    = false;
+  submitBtn.textContent = "Submit Section";
+});
 
 
+// ── SHARED ITEM MODAL ─────────────────────────────────────────────────────────
+let itemModalMode  = "new-section";
+let existingDocId  = null;
 
-const itemModal = document.getElementById("itemModal");
-const openItemBtn = document.getElementById("addItemBtn");
+const itemModal         = document.getElementById("itemModal");
 const closeItemModalBtn = document.getElementById("closeItemModalBtn");
-const itemForm = document.getElementById("itemForm");
- 
-openItemBtn.onclick = () => {
+const itemForm          = document.getElementById("itemForm");
+
+document.getElementById("addItemBtn").onclick = () => {
+  itemModalMode          = "new-section";
+  newSectionEditingIndex = null;
+  itemForm.reset();
+  document.getElementById("category").value = "";
   itemModal.style.display = "flex";
-  
 };
 
 closeItemModalBtn.onclick = () => {
   itemModal.style.display = "none";
   itemForm.reset();
+  newSectionEditingIndex = null;
 };
 
-// On save in item modal
-let editingIndex = null; // Track index if editing
+window.addEventListener("click", (e) => {
+  if (e.target === itemModal) {
+    itemModal.style.display = "none";
+    itemForm.reset();
+    newSectionEditingIndex = null;
+  }
+});
 
 itemForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+
   const submitBtn = itemForm.querySelector("button[type='submit']");
-  submitBtn.disabled = true;
-  submitBtn.innerText = "Saving...";
+  submitBtn.disabled    = true;
+  submitBtn.textContent = "Saving…";
 
+  const name        = document.getElementById("itemName").value.trim();
+  const price       = parseFloat(document.getElementById("itemPrice").value);
+  const stock       = parseInt(document.getElementById("itemStock").value);
   const description = document.getElementById("itemDescription").value.trim();
-  const name = document.getElementById("itemName").value.trim();
-  const price = parseFloat(document.getElementById("itemPrice").value);
-  const stock = parseInt(document.getElementById("itemStock").value);
-  const imageInput = document.getElementById("itemImage");
-  const category = document.getElementById("category").value.trim();
+  const category    = document.getElementById("category").value.trim();
+  const imageInput  = document.getElementById("itemImage");
+  const imageFile   = imageInput.files[0];
 
-  let imageUrl = null;
-
-  try {
-    if (imageInput.files.length > 0) {
-      const file = imageInput.files[0];
-  
-      const options = {
-        maxSizeMB: 0.5, // Compress to ~500KB
-        maxWidthOrHeight: 800,
-        useWebWorker: true,
-      };
-  
-      const compressedFile = await imageCompression(file, options);
-      const storageRef = ref(storage, `items/${Date.now()}_${compressedFile.name}`);
-      const snapshot = await uploadBytes(storageRef, compressedFile);
-      imageUrl = await getDownloadURL(snapshot.ref);
-    }
-  
-    if (name && !isNaN(price) && !isNaN(stock) && category) {
-
-      const itemData = { name, price, stock, description, category, imageUrl };
-  
-      if (editingIndex !== null) {
-        sectionItems[editingIndex] = itemData;
-        editingIndex = null;
-      } else {
-        sectionItems.push(itemData);
-      }
-  
-      renderItemPreviewList();
-      itemModal.style.display = "none";
-      itemForm.reset();
-    }
-  } catch (err) {
-    console.error("Error saving item:", err);
-    alert("❌ Error saving item.");
+  // Validate image type
+  if (!validateImageFile(imageFile)) {
+    submitBtn.disabled    = false;
+    submitBtn.textContent = "Save";
+    return;
   }
-  
-  
 
-  submitBtn.disabled = false;
-  submitBtn.innerText = "Save";
+  // Enforce stock >= 1
+  if (isNaN(stock) || stock < 1) {
+    alert("Quantity must be at least 1.");
+    submitBtn.disabled    = false;
+    submitBtn.textContent = "Save";
+    return;
+  }
+
+  let imageUrl = "";
+
+  if (imageFile) {
+    try {
+      const options        = { maxSizeMB: 0.5, maxWidthOrHeight: 800, useWebWorker: true };
+      const compressedFile = await imageCompression(imageFile, options);
+      const storageRef     = ref(storage, `items/${Date.now()}_${compressedFile.name}`);
+      const snapshot       = await uploadBytes(storageRef, compressedFile);
+      imageUrl             = await getDownloadURL(snapshot.ref);
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      alert("❌ Failed to upload image.");
+      submitBtn.disabled    = false;
+      submitBtn.textContent = "Save";
+      return;
+    }
+  }
+
+  const itemData = { name, price, stock, description, category, imageUrl };
+
+  if (itemModalMode === "new-section") {
+    if (newSectionEditingIndex !== null) {
+      if (!imageFile) itemData.imageUrl = newSectionItems[newSectionEditingIndex].imageUrl;
+      newSectionItems[newSectionEditingIndex] = itemData;
+      newSectionEditingIndex = null;
+    } else {
+      newSectionItems.push(itemData);
+    }
+    renderNewSectionPreview();
+
+  } else if (itemModalMode === "existing-section") {
+    try {
+      const docRef  = doc(db, "sections", existingDocId);
+      const docSnap = await getDoc(docRef);
+      const data    = docSnap.data();
+      data.items.push(itemData);
+      await updateDoc(docRef, { items: data.items });
+      loadSections();
+    } catch (err) {
+      console.error("Failed to add item to existing section:", err);
+      alert("❌ Failed to add item.");
+    }
+  }
+
+  itemModal.style.display = "none";
+  itemForm.reset();
+  submitBtn.disabled    = false;
+  submitBtn.textContent = "Save";
 });
 
 
-
-function renderItemPreviewList() {
+function renderNewSectionPreview() {
+  const itemPreviewList = document.getElementById("itemPreviewList");
   itemPreviewList.innerHTML = "";
-  sectionItems.forEach((item, index) => {
-    const displayName = item.name.length > 20 ? item.name.substring(0, 20) + "..." : item.name;
+
+  newSectionItems.forEach((item, index) => {
+    const displayName = item.name.length > 20 ? item.name.slice(0, 20) + "…" : item.name;
 
     const div = document.createElement("div");
     div.className = "item-entry";
     div.innerHTML = `
-      <p style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-        <span><strong>${displayName}</strong> - ₦${item.price} (${item.stock})</span>
-        <span class="edit-icon" data-index="${index}" style="cursor: pointer;">
-          <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#000">
-            <path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/>
-          </svg>
-        </span>
-        <span class="delete-icon" data-index="${index}" style="cursor: pointer;">
-          <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#000">
-            <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
-          </svg>
-        </span>
-      </p>
-      ${item.imageUrl ? `<img src="${item.imageUrl}" style="max-width: 80px; max-height: 80px; object-fit: cover;">` : ""}
+      ${item.imageUrl ? `<img src="${item.imageUrl}" alt="${item.name}">` : ""}
+      <p><strong>${displayName}</strong> — ₦${item.price} (qty: ${item.stock})</p>
+      <span class="edit-icon"   data-index="${index}" style="cursor:pointer;" title="Edit">
+        <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px">
+          <path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/>
+        </svg>
+      </span>
+      <span class="delete-icon" data-index="${index}" style="cursor:pointer;" title="Remove">
+        <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px">
+          <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+        </svg>
+      </span>
     `;
-    itemPreviewList.appendChild(div);
-  });
 
-  // Event listeners for delete/edit
-  document.querySelectorAll(".delete-icon").forEach(span => {
-    span.onclick = () => {
-      const i = parseInt(span.dataset.index);
-      sectionItems.splice(i, 1);
-      renderItemPreviewList();
+    div.querySelector(".delete-icon").onclick = () => {
+      newSectionItems.splice(index, 1);
+      renderNewSectionPreview();
     };
-  });
 
-  document.querySelectorAll(".edit-icon").forEach(span => {
-    span.onclick = () => {
-      const i = parseInt(span.dataset.index);
-      const item = sectionItems[i];
-      editingIndex = i;
-
-      document.getElementById("itemName").value = item.name;
-      document.getElementById("itemPrice").value = item.price;
-      document.getElementById("itemStock").value = item.stock;
-      document.getElementById("itemDescription").value = item.description || "";
-
+    div.querySelector(".edit-icon").onclick = () => {
+      newSectionEditingIndex = index;
+      const it = newSectionItems[index];
+      document.getElementById("itemName").value        = it.name;
+      document.getElementById("itemPrice").value       = it.price;
+      document.getElementById("itemStock").value       = it.stock;
+      document.getElementById("itemDescription").value = it.description || "";
+      document.getElementById("category").value        = it.category || "";
+      itemModalMode           = "new-section";
       itemModal.style.display = "flex";
     };
+
+    itemPreviewList.appendChild(div);
   });
 }
 
 
+// ══════════════════════════════════════════════════════════════════════════════
+// LOAD & RENDER EXISTING SECTIONS
+// ══════════════════════════════════════════════════════════════════════════════
 
-
-
-
-const sectionContainer = document.getElementById('sectionContainer');
+const sectionContainer = document.getElementById("sectionContainer");
 
 function renderSections(sections, docIds) {
   sectionContainer.innerHTML = "";
 
   sections.forEach((section, secIndex) => {
-  
-  
     const itemsHTML = section.items.map((item, itemIndex) => `
-      <div class="item-card" data-section-index="${secIndex}" data-item-index="${itemIndex}">
-        <img src="${item.imageUrl}" class="item-img" alt="${item.name}">
+      <div class="item-card" data-section-index="${secIndex}" data-item-index="${itemIndex}" style="animation-delay:${itemIndex * 0.05}s;">
+        <img src="${item.imageUrl || ''}" class="item-img" alt="${item.name}">
         <div class="item-details">
-          <div class="item-name">${item.name.length > 20 ? item.name.slice(0, 20) + "..." : item.name}</div>
-          <div class="item-desc" style="display: none;">${item.description}</div>
-          <div class="item-price">$${item.price}</div>
+          <div class="item-name">${item.name.length > 20 ? item.name.slice(0, 20) + "…" : item.name}</div>
+          <div class="item-price">₦${item.price}</div>
           <div class="item-stock">Qty: ${item.stock}</div>
         </div>
         <div class="item-actions">
-        <button class="edit-item-btn">Edit</button>
-        <button class="delete-item-btn">Delete</button>
-      </div>
+          <button class="edit-item-btn">Edit</button>
+          <button class="delete-item-btn">Delete</button>
+        </div>
       </div>
     `).join("");
 
     const sectionHTML = `
-    <div class="section-box" data-section-index="${secIndex}">
-    <h2 class="section-title">${section.sectionName}</h2>
-    <div class="section-controls">
-      <button class="add-item-btn" data-doc-id="${docIds[secIndex]}" data-sec-index="${secIndex}">Add Item</button>
-      <button class="delete-section-btn" data-doc-id="${docIds[secIndex]}">Delete</button>
-    </div>
-    <div class="filter-bar">
-      <input type="text" placeholder="Filter by name..." class="filter-input">
-      <input type="number" placeholder="Filter by quantity..." class="filter-quantity">
-    </div>
-    <div class="items-grid">${itemsHTML}</div>
-  </div>
+      <div class="section-box" data-section-index="${secIndex}" style="animation-delay:${secIndex * 0.08}s;">
+        <h2 class="section-title">${section.sectionName}</h2>
+        <div class="section-controls">
+          <button class="add-item-btn" data-doc-id="${docIds[secIndex]}" data-sec-index="${secIndex}">+ Add Item</button>
+          <button class="delete-section-btn" data-doc-id="${docIds[secIndex]}">Delete Section</button>
+        </div>
+        <div class="filter-bar">
+          <input type="text"   placeholder="Filter by name…"     class="filter-input">
+          <input type="number" placeholder="Filter by quantity…" class="filter-quantity">
+        </div>
+        <div class="items-grid">${itemsHTML}</div>
+      </div>
     `;
- 
-    
-    
-    sectionContainer.insertAdjacentHTML('beforeend', sectionHTML);
 
+    sectionContainer.insertAdjacentHTML("beforeend", sectionHTML);
 
-    // 🟢 ADD THIS AFTER appending the HTML (still inside the forEach loop!)
-    const sectionBoxes = sectionContainer.querySelectorAll('.section-box');
-    const sectionBox = sectionBoxes[sectionBoxes.length - 1];
-    const filterInput = sectionBox.querySelector('.filter-input');
-    const filterQuantity = sectionBox.querySelector('.filter-quantity');
-    const itemCards = sectionBox.querySelectorAll('.item-card');
-  
+    const sectionBoxes   = sectionContainer.querySelectorAll(".section-box");
+    const sectionBox     = sectionBoxes[sectionBoxes.length - 1];
+    const filterInput    = sectionBox.querySelector(".filter-input");
+    const filterQuantity = sectionBox.querySelector(".filter-quantity");
+    const itemCards      = sectionBox.querySelectorAll(".item-card");
+
     function applyFilters() {
-      const query = filterInput.value.toLowerCase();
+      const q        = filterInput.value.toLowerCase();
       const quantity = parseInt(filterQuantity.value);
-  
       itemCards.forEach(card => {
-        const name = card.querySelector('.item-name').textContent.toLowerCase();
-        const stockText = card.querySelector('.item-stock').textContent;
-        const stock = parseInt(stockText.replace(/\D/g, ''));
-  
-        const matchesName = name.includes(query);
-        const matchesQty = isNaN(quantity) || stock === quantity;
-  
-        card.style.display = matchesName && matchesQty ? 'block' : 'none';
+        const name  = card.querySelector(".item-name").textContent.toLowerCase();
+        const stock = parseInt(card.querySelector(".item-stock").textContent.replace(/\D/g, ""));
+        card.style.display = (name.includes(q) && (isNaN(quantity) || stock === quantity)) ? "block" : "none";
       });
     }
-  
-    filterInput.addEventListener('input', applyFilters);
-    filterQuantity.addEventListener('input', applyFilters);
- 
-   
-});
 
- 
+    filterInput.addEventListener("input", applyFilters);
+    filterQuantity.addEventListener("input", applyFilters);
+  });
 
 
- 
- 
-  
-
-  document.querySelectorAll('.add-item-btn').forEach(btn => {
+  document.querySelectorAll(".add-item-btn").forEach(btn => {
     btn.onclick = () => {
-      const docId = btn.dataset.docId;
-      const secIndex = parseInt(btn.dataset.secIndex);
-      openAddItemModal(docId, secIndex);
+      itemModalMode          = "existing-section";
+      existingDocId          = btn.dataset.docId;
+      newSectionEditingIndex = null;
+      itemForm.reset();
+      document.getElementById("category").value = "";
+      itemModal.style.display = "flex";
     };
   });
-  
-  // Attach events after rendering
-  document.querySelectorAll('.edit-item-btn').forEach(btn => {
+
+  document.querySelectorAll(".edit-item-btn").forEach(btn => {
     btn.onclick = (e) => {
-      const card = e.target.closest('.item-card');
-      const secIndex = parseInt(card.dataset.sectionIndex);
+      const card      = e.target.closest(".item-card");
+      const secIndex  = parseInt(card.dataset.sectionIndex);
       const itemIndex = parseInt(card.dataset.itemIndex);
-      const item = sections[secIndex].items[itemIndex];
-      openEditModal(item, docIds[secIndex], itemIndex);
+      openEditModal(sections[secIndex].items[itemIndex], docIds[secIndex], itemIndex);
     };
   });
-  document.querySelectorAll('.delete-section-btn').forEach(btn => {
+
+  document.querySelectorAll(".delete-section-btn").forEach(btn => {
     btn.onclick = async () => {
-      const docId = btn.dataset.docId;
-      const confirmed = confirm("Are you sure you want to delete this section? This will also delete all item images.");
-  
-      if (!confirmed) return;
-  
-      document.getElementById("loaderOverlay").style.display = "flex";
-  
-      const docRef = doc(db, "sections", docId);
+      if (!confirm("Delete this entire section and all its images?")) return;
+      showLoader();
+
+      const docRef  = doc(db, "sections", btn.dataset.docId);
       const docSnap = await getDoc(docRef);
-  
+
       if (docSnap.exists()) {
-        const items = docSnap.data().items || [];
-  
-        // Delete all item images
-        for (const item of items) {
+        for (const item of (docSnap.data().items || [])) {
           if (item.imageUrl) {
-            try {
-              const fileRef = ref(storage, item.imageUrl);
-              await deleteObject(fileRef);
-            } catch (err) {
-              console.warn("Image delete failed:", err.message);
-            }
+            try { await deleteObject(ref(storage, item.imageUrl)); }
+            catch (err) { console.warn("Image delete failed:", err.message); }
           }
         }
-  
-        // Delete the section document
         await deleteDoc(docRef);
       }
-  
-      document.getElementById("loaderOverlay").style.display = "none";
+
+      hideLoader();
       loadSections();
     };
   });
-  
-  document.querySelectorAll('.delete-item-btn').forEach(btn => {
+
+  document.querySelectorAll(".delete-item-btn").forEach(btn => {
     btn.onclick = async (e) => {
-      const card = e.target.closest('.item-card');
-      const secIndex = parseInt(card.dataset.sectionIndex);
+      const card      = e.target.closest(".item-card");
+      const secIndex  = parseInt(card.dataset.sectionIndex);
       const itemIndex = parseInt(card.dataset.itemIndex);
-      const docId = docIds[secIndex];
-      const sectionItems = sections[secIndex].items;
-      const itemToDelete = sectionItems[itemIndex];
-  
-      const confirmed = confirm("Delete this item and its image?");
-      if (!confirmed) return;
-  
-      document.getElementById("loaderOverlay").style.display = "flex";
-  
-      // Delete item image if exists
-      if (itemToDelete.imageUrl) {
-        try {
-          const fileRef = ref(storage, itemToDelete.imageUrl);
-          await deleteObject(fileRef);
-        } catch (err) {
-          console.warn("Failed to delete image:", err.message);
-        }
+      const docId     = docIds[secIndex];
+      const items     = sections[secIndex].items;
+      const target    = items[itemIndex];
+
+      if (!confirm("Delete this item and its image?")) return;
+      showLoader();
+
+      if (target.imageUrl) {
+        try { await deleteObject(ref(storage, target.imageUrl)); }
+        catch (err) { console.warn("Image delete failed:", err.message); }
       }
-  
-      // Remove item from Firestore
-      sectionItems.splice(itemIndex, 1);
+
+      items.splice(itemIndex, 1);
       const docRef = doc(db, "sections", docId);
-  
-      if (sectionItems.length === 0) {
+      if (items.length === 0) {
         await deleteDoc(docRef);
       } else {
-        await updateDoc(docRef, { items: sectionItems });
+        await updateDoc(docRef, { items });
       }
-  
-      document.getElementById("loaderOverlay").style.display = "none";
+
+      hideLoader();
       loadSections();
     };
   });
-  
-  
-}
- 
-
-function openAddItemModal(docId) {
-  const itemModal = document.getElementById("itemModal");
-  itemModal.style.display = "flex";
-
-  const form = document.getElementById("itemForm");
-
-  // Clear previous handlers
-  const newForm = form.cloneNode(true);
-  form.parentNode.replaceChild(newForm, form);
-
-  newForm.onsubmit = async (e) => {
-    e.preventDefault();
-    const submitBtn = newForm.querySelector("button[type='submit']");
-    submitBtn.disabled = true;
-    submitBtn.innerText = "Saving...";
-  
-    const name = document.getElementById("itemName").value.trim();
-    const price = parseFloat(document.getElementById("itemPrice").value);
-    const stock = parseInt(document.getElementById("itemStock").value);
-    const description = document.getElementById("itemDescription").value.trim();
-    const imageFile = document.getElementById("itemImage").files[0];
-    const category = document.getElementById("category").value.trim();
-
-    let imageUrl = "";
-    if (imageFile) {
-      try {
-        const options = {
-          maxSizeMB: 0.5,
-          maxWidthOrHeight: 800,
-          useWebWorker: true,
-        };
-  
-        const compressedFile = await imageCompression(imageFile, options);
-        const storageRef = ref(storage, `items/${Date.now()}_${compressedFile.name}`);
-        const snapshot = await uploadBytes(storageRef, compressedFile);
-        imageUrl = await getDownloadURL(snapshot.ref);
-      } catch (err) {
-        console.error("Image compression failed:", err);
-        alert("❌ Failed to compress or upload image.");
-        submitBtn.disabled = false;
-        submitBtn.innerText = "Save";
-        return;
-      }
-    }
-  
-    const newItem = { name, price, stock, description, category, imageUrl };
-  
-    const docRef = doc(db, "sections", docId);
-    const docSnap = await getDoc(docRef);
-    const data = docSnap.data();
-    data.items.push(newItem);
-  
-    await updateDoc(docRef, { items: data.items });
-  
-    itemModal.style.display = "none";
-    newForm.reset();
-    submitBtn.disabled = false;
-    submitBtn.innerText = "Save";
-    loadSections();
-  };
-  
 }
 
 
+// ── EDIT ITEM MODAL ───────────────────────────────────────────────────────────
+const editModal         = document.getElementById("editItemModal");
+const closeEditModalBtn = document.getElementById("closeEditModalBtn");
+const editItemForm      = document.getElementById("editItemForm");
+
+closeEditModalBtn.onclick = () => { editModal.style.display = "none"; editItemForm.reset(); };
+window.addEventListener("click", (e) => {
+  if (e.target === editModal) { editModal.style.display = "none"; editItemForm.reset(); }
+});
 
 function openEditModal(item, docId, itemIndex) {
-  document.getElementById("editName").value = item.name;
-  document.getElementById("editPrice").value = item.price;
-  document.getElementById("editStock").value = item.stock;
-  document.getElementById("editDesc").value = item.description;
-document.getElementById("editCategory").value= item.category
+  document.getElementById("editName").value     = item.name;
+  document.getElementById("editPrice").value    = item.price;
+  document.getElementById("editStock").value    = item.stock;
+  document.getElementById("editDesc").value     = item.description || "";
+  document.getElementById("editCategory").value = item.category || "";
+  editModal.style.display = "flex";
 
+  const freshForm = editItemForm.cloneNode(true);
+  editItemForm.parentNode.replaceChild(freshForm, editItemForm);
 
-  document.getElementById("editItemModal").style.display = "flex";
+  // Re-apply restrictions on cloned inputs
+  lockToImages(freshForm.querySelector("#editImage"));
+  enforceMinOne(freshForm.querySelector("#editStock"));
 
-  const form = document.getElementById("editItemForm");
-  form.onsubmit = async (e) => {
+  document.getElementById("closeEditModalBtn").onclick = () => {
+    document.getElementById("editItemModal").style.display = "none";
+    freshForm.reset();
+  };
+
+  freshForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+    const submitBtn = freshForm.querySelector("button[type='submit']");
+    submitBtn.disabled    = true;
+    submitBtn.textContent = "Saving…";
+
+    const stockVal = parseInt(document.getElementById("editStock").value);
+    if (isNaN(stockVal) || stockVal < 1) {
+      alert("Quantity must be at least 1.");
+      submitBtn.disabled    = false;
+      submitBtn.textContent = "Save Changes";
+      return;
+    }
+
+    const imageFile = document.getElementById("editImage").files[0];
+    if (!validateImageFile(imageFile)) {
+      submitBtn.disabled    = false;
+      submitBtn.textContent = "Save Changes";
+      return;
+    }
 
     const updatedItem = {
-      name: document.getElementById("editName").value.trim(),
-      price: parseFloat(document.getElementById("editPrice").value),
-      stock: parseInt(document.getElementById("editStock").value),
-      category: document.getElementById("editCategory").value.trim(),
+      name:        document.getElementById("editName").value.trim(),
+      price:       parseFloat(document.getElementById("editPrice").value),
+      stock:       stockVal,
+      category:    document.getElementById("editCategory").value.trim(),
       description: document.getElementById("editDesc").value.trim()
     };
 
-    const imageFile = document.getElementById("editImage").files[0];
-
     if (imageFile) {
       try {
-        // Delete old image
         if (item.imageUrl) {
-          try {
-            const oldRef = ref(storage, item.imageUrl);
-            await deleteObject(oldRef);
-          } catch (err) {
-            console.warn("Failed to delete old image:", err.message);
-          }
+          try { await deleteObject(ref(storage, item.imageUrl)); }
+          catch (err) { console.warn("Old image delete failed:", err.message); }
         }
-
-        // Compress new image
-        const options = {
-          maxSizeMB: 0.5,
-          maxWidthOrHeight: 800,
-          useWebWorker: true,
-        };
+        const options        = { maxSizeMB: 0.5, maxWidthOrHeight: 800, useWebWorker: true };
         const compressedFile = await imageCompression(imageFile, options);
-
-        const storageRef = ref(storage, `items/${Date.now()}_${compressedFile.name}`);
-        const snapshot = await uploadBytes(storageRef, compressedFile);
+        const storageRef     = ref(storage, `items/${Date.now()}_${compressedFile.name}`);
+        const snapshot       = await uploadBytes(storageRef, compressedFile);
         updatedItem.imageUrl = await getDownloadURL(snapshot.ref);
       } catch (err) {
-        console.error("Error compressing or uploading image:", err.message);
+        console.error("Image update failed:", err);
         alert("❌ Failed to update image.");
+        submitBtn.disabled    = false;
+        submitBtn.textContent = "Save Changes";
         return;
       }
     } else {
       updatedItem.imageUrl = item.imageUrl;
     }
 
-    const docRef = doc(db, "sections", docId);
+    const docRef  = doc(db, "sections", docId);
     const docSnap = await getDoc(docRef);
-    const data = docSnap.data();
+    const data    = docSnap.data();
     data.items[itemIndex] = updatedItem;
-
     await updateDoc(docRef, { items: data.items });
+
     document.getElementById("editItemModal").style.display = "none";
     loadSections();
-  };
+
+    submitBtn.disabled    = false;
+    submitBtn.textContent = "Save Changes";
+  });
 }
 
 
-
-
- 
 async function loadSections() {
   const snapshot = await getDocs(collection(db, "sections"));
-  const data = snapshot.docs.map(doc => doc.data());
-  const docIds = snapshot.docs.map(doc => doc.id);
+  const data     = snapshot.docs.map(d => d.data());
+  const docIds   = snapshot.docs.map(d => d.id);
   renderSections(data, docIds);
 }
-
 
 loadSections();
 
 
+// ══════════════════════════════════════════════════════════════════════════════
+// ORDERS PANEL
+// ══════════════════════════════════════════════════════════════════════════════
 
-const editModal = document.getElementById("editItemModal");
-const closeEditModalBtn = document.getElementById("closeEditModalBtn");
-const editForm = document.getElementById("editItemForm");
+const ordersContainer  = document.getElementById("ordersContainer");
+const filterNameInput  = document.querySelector(".filter-name-order");
+const filterEmailInput = document.querySelector(".filter-email-order");
+const filterDateInput  = document.querySelector(".filter-date-order");
 
-// Close modal on × button
-closeEditModalBtn.onclick = () => {
-  editModal.style.display = "none";
-  editForm.reset(); // Clear form
-};
+flatpickr(".filter-date-order", { dateFormat: "Y-m-d", allowInput: false });
 
-// Close modal when clicking outside the modal content
-window.addEventListener("click", (e) => {
-  if (e.target === editModal) {
-    editModal.style.display = "none";
-    editForm.reset(); // Clear form
-  }
-});
+let allOrders  = [];
+let allDocRefs = [];
 
+function createAndMountModal(html) {
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = html.trim();
+  const modal = wrapper.firstElementChild;
+  document.body.appendChild(modal);
+  return modal;
+}
 
-
-document.addEventListener("DOMContentLoaded", async () => {
-  const ordersContainer = document.getElementById("ordersContainer");
-  const filterNameInput = document.querySelector(".filter-name-order");
-  const filterEmailInput = document.querySelector(".filter-email-order");
-  const filterDateInput = document.querySelector(".filter-date-order");
-
-  flatpickr(".filter-date-order", {
-    dateFormat: "Y-m-d",
-    allowInput: false  // 🔒 disables typing
-  });
-  
-
-  let allOrders = [];
-
-  function renderOrders(filteredOrders, docRefs) {
-
-    ordersContainer.innerHTML = "";
-
-    filteredOrders.forEach((order, index) => {
-      const orderId = `modal-${index}`;
-      const total = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      const pendingChecked = order.status === "pending" ? "checked" : "";
-      const completeChecked = order.status === "complete" ? "checked" : "";
-      const deliveredChecked = order.status === "delivered" ? "checked" : "";
-      
-      const orderBox = document.createElement("div");
-      orderBox.classList.add("order-box");
-      orderBox.innerHTML = `
-        <p><strong>Name:</strong> ${order.name}</p>
-        <p><strong>Email:</strong> ${order.email}</p>
-        <p><strong>Phone:</strong> ${order.phone}</p>
-        <p><strong>Country:</strong> ${order.country?.label || ""}</p>
-        <p><strong>Delivery location:</strong> ${order.pickup}</p>
-        <p><strong>Timestamp:</strong> ${new Date(order.timestamp).toLocaleString()}</p>
-        <p><strong>Total:</strong> $${total.toFixed(2)}</p>
-        <button class="view-items-btn" data-modal="${orderId}">View Items</button>
-        <button class="status-btn" data-status="${index}">Status</button>
-        <button class="delete-order-btn" data-index="${index}">Delete</button>
-        
-
-<div id="status-modal-${index}" class="status-modal" style="display: none;">
-  <div class="status-modal-content">
-    <span class="close-status-modal" data-status="${index}">&times;</span>
-    <h3>Order Status</h3>
-    <form class="status-form">
-    <label><input type="radio" name="status-${index}" value="pending" ${pendingChecked}> Pending</label><br>
-    <label><input type="radio" name="status-${index}" value="complete" ${completeChecked}> Complete</label><br>
-    <label><input type="radio" name="status-${index}" value="delivered" ${deliveredChecked}> Delivered</label><br>
-    
-    <textarea class="status-message pending-message" style="${order.status === 'pending' ? '' : 'display:none;'}">Hi ${order.name}, your order is currently pending. We’ll notify you when it's being processed.</textarea><br>
-    
-    <textarea class="status-message complete-message" style="${order.status === 'complete' ? '' : 'display:none;'}">Hi ${order.name}, your order has been marked as complete. Thank you for shopping with us!</textarea><br>
-    
-    <textarea class="status-message delivered-message" style="${order.status === 'delivered' ? '' : 'display:none;'}">Hi ${order.name}, your order has been delivered. Kindly confirm receipt. Thanks!</textarea><br>
-    
-      <span type="submit" class="send-status-btn">Send Update</span>
-    </form>
-  </div>
-</div>
+function removeModal(modal) {
+  if (modal && modal.parentNode) modal.parentNode.removeChild(modal);
+}
 
 
-        <div id="${orderId}" class="items-modal">
+function renderOrders(filteredOrders, docRefs) {
+  ordersContainer.innerHTML = "";
+
+  filteredOrders.forEach((order, index) => {
+    const total = (order.items || []).reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
+
+    const orderBox = document.createElement("div");
+    orderBox.classList.add("order-box");
+    orderBox.style.animationDelay = `${index * 0.06}s`;
+
+    orderBox.innerHTML = `
+      <p><strong>Name:</strong>              ${order.name || "—"}</p>
+      <p><strong>Email:</strong>             ${order.email || "—"}</p>
+      <p><strong>Phone:</strong>             ${order.phone || "—"}</p>
+      <p><strong>Country:</strong>           ${order.country?.label || "—"}</p>
+      <p><strong>Delivery location:</strong> ${order.pickup || "—"}</p>
+      <p><strong>Timestamp:</strong>         ${order.timestamp ? new Date(order.timestamp).toLocaleString() : "—"}</p>
+      <p><strong>Total:</strong>             ₦${total.toFixed(2)}</p>
+      <div class="order-actions">
+        <button class="view-items-btn">View Items</button>
+        <button class="status-btn">Status</button>
+        <button class="delete-order-btn">Delete</button>
+      </div>
+    `;
+
+    ordersContainer.appendChild(orderBox);
+
+    const viewItemsBtn   = orderBox.querySelector(".view-items-btn");
+    const statusBtn      = orderBox.querySelector(".status-btn");
+    const deleteOrderBtn = orderBox.querySelector(".delete-order-btn");
+
+    // ── VIEW ITEMS ─────────────────────────────────────────────────────────
+    viewItemsBtn.addEventListener("click", () => {
+      // Each order item may store the image as 'image', 'imageUrl', or inside
+      // a nested 'item' object — try all variants so the photo always shows.
+      const itemsHTML = (order.items || []).map(item => {
+        const imgSrc = item.image || item.imageUrl || item.img || "";
+        const qty    = item.quantity ?? item.qty ?? 1;
+        const price  = item.price ?? 0;
+        const name   = item.name || "Unknown item";
+
+        return `
+          <div class="modal-item">
+            ${imgSrc
+              ? `<img src="${imgSrc}" alt="${name}" onerror="this.style.display='none'">`
+              : `<div style="width:54px;height:54px;border-radius:8px;background:var(--bg-elevated);border:1px solid var(--border);flex-shrink:0;"></div>`
+            }
+            <span>
+              <strong>${name}</strong><br>
+              Qty: ${qty}<br>
+              Price: ₦${price}
+            </span>
+          </div>
+        `;
+      }).join("");
+
+      const modal = createAndMountModal(`
+        <div class="modal" style="display:flex;">
           <div class="items-modal-content">
-            <span class="close-items-modal" data-modal="${orderId}">&times;</span>
-            <h3>Ordered Items</h3>
-            <div class="items-list">
-              ${order.items.map(item => `
-                <div class="modal-item">
-                  <img src="${item.image || ''}" alt="${item.name}" />
-                  <span>Name: ${item.name} <br>Quantity: ${item.quantity}</span>
-                </div>
-              `).join('')}
+            <span class="close" style="cursor:pointer;">&times;</span>
+            <h2>Order Info</h2>
+            <div style="margin-bottom:14px; font-size:13.5px; color:var(--text-secondary);">
+              <p><strong>Name:</strong> ${order.name || "—"}</p>
+              <p><strong>Email:</strong> ${order.email || "—"}</p>
+              <p><strong>Phone:</strong> ${order.phone || "—"}</p>
+              <p><strong>Delivery location:</strong> ${order.pickup || "—"}</p>
+              <p><strong>Date:</strong> ${order.timestamp ? new Date(order.timestamp).toLocaleString() : "—"}</p>
             </div>
+            <h2>Items</h2>
+            <div class="items-list">${itemsHTML || "<p style='color:var(--text-muted)'>No items found.</p>"}</div>
           </div>
         </div>
-      `;
+      `);
 
-      ordersContainer.appendChild(orderBox);
-
-      const form = orderBox.querySelector(".status-form");
-      const submitSpan = form.querySelector(".send-status-btn");
-      
-      // Listen for span click to trigger the form submission
-      submitSpan.addEventListener("click", () => {
-        form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
-      });
-      
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-      
-        if (submitSpan.classList.contains("disabled")) return;
-      
-        const loader = document.getElementById("loaderOverlay");
-      
-        submitSpan.classList.add("disabled");
-        submitSpan.textContent = "Processing...";
-        loader.style.display = "block"; // 🔥 Show top-of-body loader
-      
-        const selectedStatus = form.querySelector(`input[name="status-${index}"]:checked`)?.value;
-        let message = "";
-      
-        if (selectedStatus === "pending") {
-          message = form.querySelector(".pending-message").value.trim();
-        } else if (selectedStatus === "complete") {
-          message = form.querySelector(".complete-message").value.trim();
-        } else if (selectedStatus === "delivered") {
-          message = form.querySelector(".delivered-message").value.trim();
-        }
-      
-        const docRef = docRefs[index].ref;
-      
-        try {
-          await updateDoc(docRef, { status: selectedStatus });
-      
-          if (!order.email || order.email.trim() === "") {
-            alert("❌ No valid email found for this order.");
-            loader.style.display = "none";
-            return;
-          }
-      
-          await emailjs.send("service_w3zumfl", "template_a3rcx9f", {
-            to_name: order.name,
-            to_email: order.email,
-            message: message
-          });
-      
-          alert("✅ Status updated and email sent!");
-          window.location.reload(); // 🔁 Reload after success
-        } catch (err) {
-          console.error("Email sending error:", err);
-          alert("❌ Failed to update status or send email.");
-      
-          submitSpan.classList.remove("disabled");
-          submitSpan.textContent = "Send Update";
-          loader.style.display = "none"; // ❌ Hide on failure
-        }
-      });
-      
-      
-      
-      
+      modal.querySelector(".close").onclick = () => removeModal(modal);
+      modal.addEventListener("click", (e) => { if (e.target === modal) removeModal(modal); });
     });
-    
- 
- 
-    
-    document.querySelectorAll(".status-form").forEach((form, formIndex) => {
-      const radios = form.querySelectorAll(`input[name="status-${formIndex}"]`);
-      const pendingMsg = form.querySelector(".pending-message");
-      const completeMsg = form.querySelector(".complete-message");
+
+
+    // ── STATUS ─────────────────────────────────────────────────────────────
+    statusBtn.addEventListener("click", () => {
+      const pendingChecked   = order.status === "pending"   ? "checked" : "";
+      const completeChecked  = order.status === "complete"  ? "checked" : "";
+      const deliveredChecked = order.status === "delivered" ? "checked" : "";
+
+      const modal = createAndMountModal(`
+        <div class="modal" style="display:flex;">
+          <div class="modal-content" style="max-width:460px; width:95vw;">
+            <span class="close" style="cursor:pointer;">&times;</span>
+            <h3>Order Status — ${order.name || ""}</h3>
+            <form class="status-form" style="margin-top:12px;">
+              <label><input type="radio" name="status" value="pending"   ${pendingChecked}>   Pending</label>
+              <label><input type="radio" name="status" value="complete"  ${completeChecked}>  Complete</label>
+              <label><input type="radio" name="status" value="delivered" ${deliveredChecked}> Delivered</label>
+
+              <textarea class="status-message pending-message"   style="${order.status === 'pending'   ? '' : 'display:none;'}">Hi ${order.name}, your order is currently pending. We'll notify you when it's being processed.</textarea>
+              <textarea class="status-message complete-message"  style="${order.status === 'complete'  ? '' : 'display:none;'}">Hi ${order.name}, your order has been marked as complete. Thank you for shopping with us!</textarea>
+              <textarea class="status-message delivered-message" style="${order.status === 'delivered' ? '' : 'display:none;'}">Hi ${order.name}, your order has been delivered. Kindly confirm receipt. Thanks!</textarea>
+
+              <span class="send-status-btn" style="display:inline-block; margin-top:8px; cursor:pointer;">Send Update</span>
+            </form>
+          </div>
+        </div>
+      `);
+
+      const form         = modal.querySelector(".status-form");
+      const radios       = form.querySelectorAll("input[type='radio']");
+      const sendBtn      = form.querySelector(".send-status-btn");
+      const pendingMsg   = form.querySelector(".pending-message");
+      const completeMsg  = form.querySelector(".complete-message");
       const deliveredMsg = form.querySelector(".delivered-message");
-    
+
       radios.forEach(radio => {
         radio.addEventListener("change", () => {
-          pendingMsg.style.display = radio.value === "pending" ? "block" : "none";
-          completeMsg.style.display = radio.value === "complete" ? "block" : "none";
+          pendingMsg.style.display   = radio.value === "pending"   ? "block" : "none";
+          completeMsg.style.display  = radio.value === "complete"  ? "block" : "none";
           deliveredMsg.style.display = radio.value === "delivered" ? "block" : "none";
         });
       });
-    });
-    
-    
 
-    // Attach modal events
-    document.querySelectorAll(".view-items-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const modalId = btn.dataset.modal;
-        document.getElementById(modalId).style.display = "flex";
-      });
-    });
+      sendBtn.addEventListener("click", async () => {
+        if (sendBtn.classList.contains("disabled")) return;
 
-    document.querySelectorAll(".status-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const index = btn.dataset.status;
-        document.getElementById(`status-modal-${index}`).style.display = "flex";
-      });
-    });
-    document.querySelectorAll(".delete-order-btn").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const index = btn.dataset.index;
-        const confirmDelete = confirm("Are you sure you want to delete this order?");
-        if (!confirmDelete) return;
-    
-        const docRef = docRefs[index].ref;
+        const selectedRadio = form.querySelector("input[type='radio']:checked");
+        if (!selectedRadio) { alert("Please select a status."); return; }
+
+        const selectedStatus = selectedRadio.value;
+        let message = "";
+        if (selectedStatus === "pending")   message = pendingMsg.value.trim();
+        if (selectedStatus === "complete")  message = completeMsg.value.trim();
+        if (selectedStatus === "delivered") message = deliveredMsg.value.trim();
+
+        if (!order.email?.trim()) { alert("❌ No valid email for this order."); return; }
+
+        sendBtn.classList.add("disabled");
+        sendBtn.textContent = "Processing…";
+        showLoader();
+
         try {
-          await deleteDoc(docRef);
-          alert("🗑️ Order deleted.");
-          // Re-fetch and re-render orders
-          const snapshot = await getDocs(collection(db, "orders"));
-          allOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          renderOrders(allOrders, snapshot.docs);
+          const docRef = docRefs[index].ref;
+          await updateDoc(docRef, { status: selectedStatus });
+
+          await emailjs.send("service_w3zumfl", "template_a3rcx9f", {
+            to_name:  order.name,
+            to_email: order.email,
+            message
+          });
+
+          alert("✅ Status updated and email sent!");
+          removeModal(modal);
+          hideLoader();
+          allOrders[allOrders.indexOf(order)].status = selectedStatus;
         } catch (err) {
-          console.error("❌ Failed to delete order:", err);
-          alert("Failed to delete order. Try again.");
+          console.error("Status update error:", err);
+          alert("❌ Failed to update status or send email.");
+          sendBtn.classList.remove("disabled");
+          sendBtn.textContent = "Send Update";
+          hideLoader();
         }
       });
+
+      modal.querySelector(".close").onclick = () => removeModal(modal);
+      modal.addEventListener("click", (e) => { if (e.target === modal) removeModal(modal); });
     });
-    
-    document.querySelectorAll(".close-status-modal").forEach(close => {
-      close.addEventListener("click", () => {
-        const index = close.dataset.status;
-        const modal = document.getElementById(`status-modal-${index}`);
-        modal.classList.remove("fadeIn"); // remove open animation
-        modal.style.animation = "fadeOut 0.3s ease-out forwards"; // add fade out
-    
-        setTimeout(() => {
-          modal.style.display = "none";
-        }, 300); // match animation duration
-      });
-    });
-    
-    
-    document.addEventListener("click", (e) => {
-      if (e.target.classList.contains("status-modal")) {
-        e.target.style.display = "none";
+
+
+    // ── DELETE order ──────────────────────────────────────────────────────
+    deleteOrderBtn.addEventListener("click", async () => {
+      if (!confirm("Are you sure you want to delete this order?")) return;
+
+      try {
+        await deleteDoc(docRefs[index].ref);
+        alert("🗑️ Order deleted.");
+        const snapshot = await getDocs(collection(db, "orders"));
+        allOrders  = snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        allDocRefs = snapshot.docs;
+        renderOrders(allOrders, allDocRefs);
+      } catch (err) {
+        console.error("Delete order failed:", err);
+        alert("❌ Failed to delete order.");
       }
     });
-    
+  });
+}
 
-    document.querySelectorAll(".close-items-modal").forEach(close => {
-      close.addEventListener("click", () => {
-        const modalId = close.dataset.modal;
-        document.getElementById(modalId).style.display = "none";
-      });
-    });
 
-    document.addEventListener("click", (e) => {
-      if (e.target.classList.contains("items-modal")) {
-        e.target.style.display = "none";
-      }
-    });
+// ── Filters ───────────────────────────────────────────────────────────────────
+function applyOrderFilters() {
+  const nameVal  = filterNameInput.value.toLowerCase();
+  const emailVal = filterEmailInput.value.toLowerCase();
+  const dateVal  = filterDateInput.value;
 
-   
-  }
+  const filtered = allOrders.filter(order => {
+    const matchesName  = (order.name  || "").toLowerCase().includes(nameVal);
+    const matchesEmail = (order.email || "").toLowerCase().includes(emailVal);
+    const matchesDate  = !dateVal || (order.timestamp && new Date(order.timestamp).toISOString().startsWith(dateVal));
+    return matchesName && matchesEmail && matchesDate;
+  });
 
-  function applyFilters() {
-    const nameVal = filterNameInput.value.toLowerCase();
-    const emailVal = filterEmailInput.value.toLowerCase();
-    const dateVal = filterDateInput.value;
+  const filteredDocRefs = filtered.map(order => allDocRefs.find(d => d.id === order.id));
+  renderOrders(filtered, filteredDocRefs);
+}
 
-    const filtered = allOrders.filter(order => {
-      const matchesName = order.name.toLowerCase().includes(nameVal);
-      const matchesEmail = order.email.toLowerCase().includes(emailVal);
-      const matchesDate = dateVal === "" || new Date(order.timestamp).toISOString().startsWith(dateVal);
-      return matchesName && matchesEmail && matchesDate;
-    });
+filterNameInput.addEventListener("input",  applyOrderFilters);
+filterEmailInput.addEventListener("input", applyOrderFilters);
+filterDateInput.addEventListener("change", applyOrderFilters);
 
-    renderOrders(filtered);
-  }
 
+// ── Initial orders load ───────────────────────────────────────────────────────
+(async () => {
   try {
     const snapshot = await getDocs(collection(db, "orders"));
-    
-    allOrders = snapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
-    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-      // sort from latest to oldest
-  
-    renderOrders(allOrders, snapshot.docs);
-  
-    // Filter events
-    filterNameInput.addEventListener("input", applyFilters);
-    filterEmailInput.addEventListener("input", applyFilters);
-    filterDateInput.addEventListener("change", applyFilters);
-  
+    allOrders  = snapshot.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    allDocRefs = snapshot.docs;
+    renderOrders(allOrders, allDocRefs);
   } catch (err) {
     console.error("Error loading orders:", err);
   }
-  
-});
-
+})();
