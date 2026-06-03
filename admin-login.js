@@ -11,51 +11,49 @@ import {
 
 import { getAuth, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/9.16.0/firebase-auth.js';
 
-const auth = getAuth();
-
-const form = document.getElementById("login-form");
-const emailInput = document.querySelector(".email");
-const passwordInput = document.querySelector(".password");
-const message = document.getElementById("message");
+const auth           = getAuth();
+const form           = document.getElementById("login-form");
+const emailInput     = document.querySelector(".email");
+const passwordInput  = document.querySelector(".password");
+const message        = document.getElementById("message");
 const togglePassword = document.getElementById("toggle-password");
 
-form.addEventListener("submit", function (e) {
+form.addEventListener("submit", function(e) {
   e.preventDefault();
 
-  // Get email and password
-  const email = emailInput.value.trim().toLowerCase();
+  const email    = emailInput.value.trim().toLowerCase();
   const password = passwordInput.value;
 
-  // Authenticate using Firebase Authentication
   signInWithEmailAndPassword(auth, email, password)
     .then((userCredential) => {
-      // Successfully logged in
       const user = userCredential.user;
       console.log("User logged in:", user);
 
-      // Retrieve the admin code from Firestore after successful login
- 
       const docRef = doc(db, "adminAccess", user.uid);
       getDoc(docRef).then((docSnap) => {
         if (docSnap.exists()) {
           const adminCode = docSnap.data().code;
           sessionStorage.setItem("adminCode", adminCode);
-          window.location.href = "admin.html";
+          showMessage("Welcome back!", "success");
+          setTimeout(() => {
+            window.location.href = "admin.html";
+          }, 800);
         } else {
           console.log("No admin document found", user.uid);
-          showMessage("Unauthorized access!");
+          showMessage("Unauthorized access!", "error");
         }
       });
     })
     .catch((error) => {
       console.error("Error logging in:", error);
-      showMessage("Incorrect email or password!");
+      showMessage("Incorrect email or password!", "error");
     });
 });
 
-function showMessage(msg) {
+function showMessage(msg, type = "error") {
   message.textContent = msg;
-  message.classList.add("show");
+  message.className   = "";           // clear old classes
+  message.classList.add("show", type);
 
   setTimeout(() => {
     message.classList.remove("show");
