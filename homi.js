@@ -527,10 +527,10 @@ async function saveOrderAndUpdateStock(name, email, phone, countryCodeValue, cou
       const product = listProducts.find(p => p.id === c.product_id);
       return {
         id: c.product_id,
-        itemName: product?.name || "Unnamed Item",
+        name: product?.name || "Unnamed Item",      // ← was "itemName"
         quantity: c.quantity,
         price: product?.price || 0,
-        image: product?.image || ""
+        imageUrl: product?.imageUrl || ""           // ← was product?.image
       };
     });
 
@@ -638,9 +638,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 return {
                   product_id: c.product_id,
                   quantity: c.quantity,
-                  name: product?.name || "Unnamed",
+                  name: product?.name || "Unnamed",           // ← was "name" here, this one is fine
                   price: product?.price || 0,
-                  image: product?.image || ""
+                  imageUrl: product?.imageUrl || ""           // ← was product?.image
                 };
               });
 
