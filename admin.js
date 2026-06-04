@@ -630,14 +630,15 @@ function renderOrders(filteredOrders, docRefs) {
 
     // ── VIEW ITEMS ─────────────────────────────────────────────────────────
     viewItemsBtn.addEventListener("click", () => {
-      // Each order item may store the image as 'image', 'imageUrl', or inside
-      // a nested 'item' object — try all variants so the photo always shows.
       const itemsHTML = (order.items || []).map(item => {
-        const imgSrc = item.image || item.imageUrl || item.img || "";
-        const qty    = item.quantity ?? item.qty ?? 1;
-        const price  = item.price ?? 0;
-        const name   = item.name || "Unknown item";
-
+        // Flatten nested 'item' object if present (e.g. item.item.name)
+        const flat = item.item || item;
+    
+        const imgSrc = flat.imageUrl || flat.image || flat.img || item.imageUrl || item.image || item.img || "";
+        const qty    = flat.quantity ?? flat.qty ?? item.quantity ?? item.qty ?? 1;
+        const price  = flat.price ?? item.price ?? 0;
+        const name   = flat.name || item.name || flat.title || item.title || "—";
+    
         return `
           <div class="modal-item">
             ${imgSrc
